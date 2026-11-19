@@ -15,7 +15,7 @@ function TaskEvidence({ task, requirements }) {
         <details className="pu-eval-detail">
           <summary>Căn cứ và ước lượng</summary>
           <div className="pu-eval-detail-body">
-            {linked.map(req => <p key={req.id}><strong>{req.id}</strong> · {req.text}</p>)}
+            {linked.map(req => <p key={req.id}><strong>Yêu cầu bạn nhập · {req.id}</strong> · {req.text}</p>)}
             {evidence.map((item, index) => (
               <blockquote key={index}>
                 <strong>{item.docName} · {item.chunkNumber ? `Đoạn ${item.chunkNumber}` : item.ref}</strong>

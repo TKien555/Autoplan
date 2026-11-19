@@ -1036,6 +1036,7 @@ app.post(
                 : sanitizeInput(roles, 500);
 
             let retrievedChunks = [];
+            let retrievalStatus = useRag ? 'no_match' : 'off';
             let ragContextBlock = 'Không có tài liệu chuyên môn đính kèm. Hãy phân rã theo tiêu chuẩn ngành.';
 
             if (useRag) {
@@ -1049,11 +1050,13 @@ app.post(
                     });
 
                     if (retrievedChunks.length > 0) {
+                        retrievalStatus = 'matched';
                         ragContextBlock = retrievedChunks
                             .map((c, index) => `[C${index + 1}] [Tài liệu: "${c.docName}" | Độ khớp: ${(c.score * 100).toFixed(1)}%]\n${c.content}`)
                             .join('\n\n---\n\n');
                     }
                 } catch (ragErr) {
+                    retrievalStatus = 'error';
                     console.warn('⚠️ RAG Retrieval bỏ qua do lỗi/timeout:', ragErr.message);
                 }
             }
@@ -1241,6 +1244,7 @@ Tóm tắt WBS trước:\n${sanitizeInput(previousWbs, 18000)}` : ''}`;
                     verifiedQuotes
                 },
                 ragMetadata: {
+                    retrievalStatus,
                     usedRag: Boolean(useRag && retrievedChunks.length > 0),
                     matchedChunks: retrievedChunks.map(c => ({
                         docName: c.docName,

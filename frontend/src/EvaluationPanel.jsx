@@ -10,6 +10,39 @@ const delta = (withRag, baseline) => {
   return `${difference > 0 ? '+' : ''}${numberText(difference)}`;
 };
 
+function Sources({ report }) {
+  const { requirementsOnly, ragOnly, both } = report.sourceCounts;
+  return (
+    <div className="pu-eval-detail-body">
+      <p><strong>Căn cứ đến từ đâu?</strong></p>
+      <ul>
+        <li>Chỉ từ yêu cầu bạn nhập: {requirementsOnly} công việc</li>
+        <li>Chỉ từ tài liệu RAG: {ragOnly} công việc</li>
+        <li>Từ cả yêu cầu và tài liệu RAG: {both} công việc</li>
+      </ul>
+      {report.sourceNames.length > 0 && <p>Tài liệu tìm được: {report.sourceNames.join(', ')}</p>}
+      {report.taskSources.length > 0 && (
+        <details className="pu-eval-detail">
+          <summary>Xem căn cứ theo từng công việc</summary>
+          <ol>
+            {report.taskSources.map(({ title, requirements, evidence }, index) => (
+              <li key={index}>
+                <strong>{title}</strong>
+                <ul>
+                  {requirements.map(req => <li key={req.id}>Yêu cầu bạn nhập · {req.id} · {req.text}</li>)}
+                  {evidence.map((item, index) => (
+                    <li key={index}>Tài liệu {item.docName} · {item.chunkNumber ? `đoạn ${item.chunkNumber}` : item.ref} · “{item.quote}”</li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+    </div>
+  );
+}
+
 function Report({ report }) {
   const { telemetry } = report;
   return (
@@ -28,25 +61,24 @@ function Report({ report }) {
               <li key={item.id}>
                 <strong>{item.label} · {item.display}</strong>
                 {item.detail && <div>{item.detail}</div>}
-                {item.meetsTarget === false && <div>Chưa đạt mục tiêu {item.lower ? '≤' : '≥'} {item.target}%.</div>}
+                {item.meetsTarget === false && !['foundation', 'schedule'].includes(item.id) && (
+                  <div>{item.id === 'load' ? 'Mục tiêu: mọi người đều trong định mức.' : `Mục tiêu: ${item.lower ? 'tối đa' : 'ít nhất'} ${item.target}%.`}</div>
+                )}
               </li>
             ))}
           </ul>
           {key === 'feasibility' && report.loads.length > 0 && (
             <ul>{report.loads.map((load, index) => <li key={index}>{load}</li>)}</ul>
           )}
-          {key === 'grounding' && (
-            <div className="pu-eval-detail-body">
-              <p>Tài liệu đã truy xuất · {report.sourceNames.join(', ') || 'N/A'}</p>
-            </div>
-          )}
+          {key === 'grounding' && <Sources report={report} />}
         </details>
       ))}
       <details className="pu-eval-detail" open>
         <summary>Hiệu quả</summary>
         <dl className="pu-eval-stats">
           <dt>Model</dt><dd>{telemetry.model || 'N/A'}</dd>
-          <dt>Độ trễ máy chủ</dt><dd>{numberText(telemetry.latencyMs)}{telemetry.latencyMs != null && ' ms'}</dd>
+          <dt>Thời gian máy chủ xử lý</dt>
+          <dd>{telemetry.latencyMs == null ? 'N/A' : `${(telemetry.latencyMs / 1000).toLocaleString('vi-VN', { maximumFractionDigits: 2 })} giây`}</dd>
           <dt>Token đầu vào</dt><dd>{numberText(telemetry.inputTokens)}</dd>
           <dt>Token đầu ra</dt><dd>{numberText(telemetry.outputTokens)}</dd>
           <dt>Token sinh trên mỗi công việc</dt>

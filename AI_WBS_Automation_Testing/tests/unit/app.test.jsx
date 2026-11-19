@@ -119,13 +119,15 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     await user.click(screen.getByRole('button', { name: /Tự động phân rã/ }));
     await waitFor(() => expect(screen.getAllByText('🟢 Có nguồn')).toHaveLength(3));
     expect(breakdowns).toHaveLength(2);
-    expect(breakdowns[1].refinementFeedback.join(' ')).toContain('Task nền tảng');
+    expect(breakdowns[1].refinementFeedback.join(' ')).toContain('Tích hợp, kiểm thử và sửa lỗi');
     await user.click(screen.getAllByText('Căn cứ và ước lượng')[0]);
     expect(screen.getAllByText(/Giữ tồn kho khi đặt hàng/)[0]).toBeVisible();
     await user.click(screen.getByRole('button', { name: /Xem đánh giá WBS vừa sinh/ }));
-    expect(screen.getByText('Task giữ nguyên · N/A')).toBeInTheDocument();
+    expect(screen.getByText('Công việc giữ nguyên · N/A')).toBeInTheDocument();
+    expect(screen.getByText('Chỉ từ yêu cầu bạn nhập: 3 công việc')).toBeInTheDocument();
+    expect(screen.getByText('Chỉ từ tài liệu RAG: 0 công việc')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Xác nhận đã duyệt WBS/ }));
-    expect(screen.getByText('Task giữ nguyên · 100% (3/3)')).toBeInTheDocument();
+    expect(screen.getByText('Công việc giữ nguyên · 100% (3/3)')).toBeInTheDocument();
   });
 
   // ===================================================

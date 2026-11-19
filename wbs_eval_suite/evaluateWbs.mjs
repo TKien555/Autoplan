@@ -64,14 +64,15 @@ function measure(id, label, passed, total, { target, lower = false, detail, disp
 function checkSchedule(tasks, sprints, actual) {
   if (!tasks.length || !sprints.length || !Number.isFinite(sprints[0].firstDay) || !Array.isArray(actual)) return null;
   const slots = new Map(sprints.map(sprint => [sprint.name, sprint]));
-  let invalid = actual.length !== sprints.length || sprints.some((sprint, index) => {
+  const issues = new Set();
+  if (actual.length !== sprints.length || sprints.some((sprint, index) => {
     const slot = actual[index];
     return slot?.name !== sprint.name || dateMs(slot.startDate) !== sprint.firstDay || dateMs(slot.endDate) !== sprint.lastDay;
-  });
+  })) issues.add('Lịch Sprint không khớp với thời lượng dự án.');
   const titles = new Map();
   tasks.forEach((task, index) => {
     const key = normalize(task.title);
-    if (!key || titles.has(key)) invalid = true;
+    if (!key || titles.has(key)) issues.add('Có tiêu đề công việc bị trống hoặc trùng.');
     titles.set(key, index);
   });
   const outgoing = tasks.map(() => []);
@@ -81,15 +82,17 @@ function checkSchedule(tasks, sprints, actual) {
     const slot = slots.get(task.sprint);
     const start = dateMs(task.startDate);
     const end = dateMs(task.dueDate);
-    if (!slot || !(start >= slot.firstDay && end >= start && end <= slot.lastDay)) invalid = true;
-    if (!Number.isFinite(longest[index]) || longest[index] <= 0) invalid = true;
+    if (!slot || !(start >= slot.firstDay && end >= start && end <= slot.lastDay)) issues.add('Có công việc nằm ngoài ngày của Sprint được giao.');
+    if (!Number.isFinite(longest[index]) || longest[index] <= 0) issues.add('Có công việc có số giờ ước tính chưa hợp lệ.');
     for (const title of new Set(task.dependencies || [])) {
       const predecessor = titles.get(normalize(title));
       if (predecessor === undefined) {
-        invalid = true;
+        issues.add('Có công việc phụ thuộc vào một công việc không có trong kế hoạch.');
         continue;
       }
-      if (!(dateMs(tasks[predecessor].dueDate) < start)) invalid = true;
+      if (!(dateMs(tasks[predecessor].dueDate) < start)) {
+        issues.add('Có công việc bắt đầu trước hoặc cùng ngày kết thúc của công việc cần hoàn thành trước.');
+      }
       outgoing[predecessor].push(index);
       incoming[index]++;
     }
@@ -105,8 +108,15 @@ function checkSchedule(tasks, sprints, actual) {
     }
   }
   const workingHours = sprints.reduce((total, sprint) => total + capacity(sprint), 0);
-  return { valid: !invalid && queue.length === tasks.length && criticalHours <= workingHours,
-    criticalHours: queue.length === tasks.length && Number.isFinite(criticalHours) ? criticalHours : null, workingHours };
+  if (queue.length !== tasks.length) issues.add('Các công việc phụ thuộc lẫn nhau theo vòng lặp.');
+  const hasCriticalHours = queue.length === tasks.length && Number.isFinite(criticalHours);
+  if (hasCriticalHours && criticalHours > workingHours) issues.add('Chuỗi công việc dài nhất vượt thời gian dự án.');
+  return {
+    valid: issues.size === 0,
+    detail: [...issues, ...(hasCriticalHours ? [
+      `Chuỗi công việc dài nhất cần ${Math.round(criticalHours * 10) / 10} giờ, dự án có ${workingHours} giờ làm việc.`,
+    ] : [])].join(' '),
+  };
 }
 
 const capacity = sprint => Math.max(1, Math.round(((sprint.lastDay - sprint.firstDay) / DAY_MS + 1) * 5 / 7)) * 8;
@@ -141,7 +151,7 @@ export function evaluateWbs(response, input, { review, practicality } = {}) {
   const sprints = expectedSprints(input);
   const slots = new Map(sprints.map(sprint => [sprint.name, sprint]));
   const members = new Map((input.teamMembers || []).map(member => [member.id, member]));
-  const requirements = new Set((response.requirements || []).map(req => req.id));
+  const requirements = new Map((response.requirements || []).map(req => [req.id, req.text]));
   const assigned = new Map();
   for (const task of tasks) {
     if (!members.has(task.assigneeId) || !slots.has(task.sprint) || !(task.estimatedHours > 0)) continue;
@@ -162,6 +172,30 @@ export function evaluateWbs(response, input, { review, practicality } = {}) {
     return `${member.fullName || member.username || member.role} · ${sprints.join(' · ')}`;
   });
   const refs = tasks.map(task => (task.reqIds || []).filter(id => requirements.has(id)));
+  const sourceCounts = { requirementsOnly: 0, ragOnly: 0, both: 0 };
+  const taskSources = tasks.flatMap((task, index) => {
+    const linkedRequirements = [...new Set(refs[index])].map(id => ({ id, text: requirements.get(id) }));
+    const evidence = task.evidence || [];
+    const hasRagSource = Boolean(task.sourceIds?.length || evidence.length);
+    if (linkedRequirements.length && hasRagSource) sourceCounts.both++;
+    else if (linkedRequirements.length) sourceCounts.requirementsOnly++;
+    else if (hasRagSource) sourceCounts.ragOnly++;
+    else return [];
+    return [{ title: task.title, requirements: linkedRequirements, evidence }];
+  });
+  const ragStatus = response.ragMetadata?.retrievalStatus ?? (
+    response.ragMetadata?.usedRag === true ? 'matched' :
+      input.useRag === false ? 'off' : response.ragMetadata?.usedRag === false ? 'no_match' : 'unknown'
+  );
+  const quoteStatus = metadata.proposedQuotes > 0
+    ? `${metadata.verifiedQuotes ?? 0}/${metadata.proposedQuotes} đoạn trích khớp nguyên văn với tài liệu.`
+    : {
+        off: 'Lượt này tắt RAG, nên không có đoạn tài liệu để trích nguyên văn.',
+        no_match: 'RAG bật nhưng không tìm thấy đoạn tài liệu phù hợp cho lượt này.',
+        error: 'Lượt tra cứu tài liệu gặp lỗi hoặc hết thời gian chờ.',
+        matched: 'Đã tìm thấy tài liệu phù hợp, nhưng AI không đề xuất đoạn trích nguyên văn.',
+        unknown: 'Kết quả này không có thông tin về lượt tra cứu tài liệu.',
+      }[ragStatus];
   const covered = new Set(refs.flat());
   const typeCount = ['integration', 'testing', 'bugfix'].filter(type => tasks.some(task => task.taskType === type)).length;
   const schedule = checkSchedule(tasks, sprints, response.sprintSchedule);
@@ -171,40 +205,45 @@ export function evaluateWbs(response, input, { review, practicality } = {}) {
       || /\d+(?:[.,]\d+)?\s*(?:%|ms\b|giây\b|phút\b|giờ\b|ngày\b|seconds?\b|minutes?\b)/i.test(criterion)));
   const groups = {
     completeness: [
-      measure('requirements', 'Độ phủ yêu cầu (REQ)', covered.size, requirements.size, {
-        target: 95, detail: covered.size < requirements.size
-          ? `Chưa có task: ${[...requirements].filter(id => !covered.has(id)).join(', ')}` : undefined,
+      measure('requirements', 'Yêu cầu đã có công việc', covered.size, requirements.size, {
+        target: 95, detail: requirements.size > 0
+          ? `Hệ thống tách được ${requirements.size} mục yêu cầu từ phần mô tả bạn nhập.${covered.size < requirements.size
+            ? ` Chưa có công việc cho: ${[...requirements.keys()].filter(id => !covered.has(id)).join(', ')}.` : ''}`
+          : 'Chưa có danh sách yêu cầu được tách từ phần mô tả.',
       }),
-      measure('acceptance-criteria', 'Tiêu chí nghiệm thu kiểm thử được', tasks.filter(acTestable).length, count, { target: 80 }),
-      measure('foundation', 'Task nền tảng', Number(typeCount === 3), tasks.some(task => Object.hasOwn(task, 'taskType')) ? 1 : 0, { target: 100,
-        display: typeCount === 3 ? 'Đạt · 3/3' : `Chưa đạt · ${typeCount}/3`, detail: 'Tích hợp, kiểm thử và sửa lỗi.' }),
-      measure('orphans', 'Task mồ côi', refs.filter(ids => !ids.length).length, requirements.size ? count : 0, { target: 10, lower: true }),
+      measure('acceptance-criteria', 'Công việc có cách kiểm tra kết quả', tasks.filter(acTestable).length, count, { target: 80 }),
+      measure('foundation', 'Tích hợp, kiểm thử và sửa lỗi', Number(typeCount === 3), tasks.some(task => Object.hasOwn(task, 'taskType')) ? 1 : 0, { target: 100,
+        display: typeCount === 3 ? 'Đạt · 3/3' : `Chưa đạt · ${typeCount}/3`, detail: 'Cần ít nhất một công việc cho mỗi nhóm.' }),
+      measure('orphans', 'Công việc chưa liên kết với yêu cầu', refs.filter(ids => !ids.length).length, requirements.size ? count : 0, { target: 10, lower: true }),
     ],
     feasibility: [
-      measure('load', 'Tải theo người', overloaded, assigned.size, { target: 0, lower: true, display: `${overloaded}/${assigned.size} người quá tải` }),
-      measure('schedule', 'Lịch hợp lệ', Number(schedule?.valid), schedule ? 1 : 0, {
+      measure('load', 'Khối lượng công việc của từng người', overloaded, assigned.size, { target: 0, lower: true, display: `${overloaded}/${assigned.size} người quá tải` }),
+      measure('schedule', 'Lịch làm việc có khả thi', Number(schedule?.valid), schedule ? 1 : 0, {
         target: 100, display: schedule?.valid ? 'Đạt' : 'Chưa đạt',
-        detail: schedule?.criticalHours != null ? `Đường găng ${Math.round(schedule.criticalHours * 10) / 10}h / ${schedule.workingHours}h dự án.` : 'Kiểm tra vòng lặp, thứ tự phụ thuộc và đường găng.',
+        detail: schedule?.detail,
       }),
-      measure('size', 'Task từ 4 đến 16 giờ', tasks.filter(task => task.estimatedHours >= 4 && task.estimatedHours <= 16).length, count, { target: 70 }),
+      measure('size', 'Công việc ước tính từ 4 đến 16 giờ', tasks.filter(task => task.estimatedHours >= 4 && task.estimatedHours <= 16).length, count, { target: 70 }),
       measure('roles', 'Phân công đúng chuyên môn', tasks.filter(task => members.has(task.assigneeId)
         && normalize(members.get(task.assigneeId).role) === normalize(task.role)).length, members.size ? count : 0, { target: 90 }),
     ],
     grounding: [
-      measure('sources', 'Task có nguồn', tasks.filter((task, index) => refs[index].length || task.sourceIds?.length).length,
-        requirements.size || response.ragMetadata?.usedRag || tasks.some(task => task.sourceIds?.length) ? count : 0, { target: 85 }),
-      measure('quotes', 'Trích dẫn đúng nguồn', metadata.verifiedQuotes ?? 0, metadata.proposedQuotes ?? 0, { target: 100 }),
-      measure('pert', 'Ước lượng truy được về PERT', tasks.filter(task => {
+      measure('sources', 'Công việc có căn cứ', taskSources.length,
+        requirements.size || ragStatus === 'matched' || taskSources.length ? count : 0, {
+          target: 85, detail: 'Tính công việc liên kết với yêu cầu bạn nhập hoặc có trích dẫn tài liệu đã kiểm chứng.',
+        }),
+      measure('quotes', 'Trích dẫn nguyên văn từ tài liệu RAG', metadata.verifiedQuotes ?? 0, metadata.proposedQuotes ?? 0,
+        { target: 100, detail: quoteStatus }),
+      measure('pert', 'Công việc có giải thích số giờ ước tính (PERT)', tasks.filter(task => {
         const { o, m, p } = task.pert || {};
         return [o, m, p].every(Number.isFinite) && o > 0 && o <= m && m <= p
           && Math.abs((o + 4 * m + p) / 6 - task.estimatedHours) <= 0.051;
       }).length, tasks.some(task => Object.hasOwn(task, 'pert')) ? count : 0, { target: 90 }),
     ],
     acceptance: [
-      measure('kept', 'Task giữ nguyên', review?.kept, review?.total, { target: 60 }),
-      measure('edited', 'Task đã sửa', review?.changed, review?.total),
-      measure('removed', 'Task đã xóa', review?.removed, review?.total),
-      measure('review', 'Task có cờ cần xem lại', review?.flagged, review?.flagged == null ? 0 : review.total, { target: 20, lower: true }),
+      measure('kept', 'Công việc giữ nguyên', review?.kept, review?.total, { target: 60 }),
+      measure('edited', 'Công việc đã sửa', review?.changed, review?.total),
+      measure('removed', 'Công việc đã xóa', review?.removed, review?.total),
+      measure('review', 'Công việc được đánh dấu cần xem lại', review?.flagged, review?.flagged == null ? 0 : review.total, { target: 20, lower: true }),
     ],
   };
 
@@ -240,7 +279,7 @@ export function evaluateWbs(response, input, { review, practicality } = {}) {
   const weakMetrics = Object.entries(groups).flatMap(([group, metrics]) => group === 'acceptance' ? [] :
     metrics.filter(metric => metric.meetsTarget === false).map(metric => `${criteria[group].label} · ${metric.label}: ${metric.display}${metric.detail ? ` · ${metric.detail}` : ''}`));
   return {
-    score, groups, groupScores, similarProjects, sourceNames, tasks, totalHours, weakMetrics, loads,
+    score, groups, groupScores, similarProjects, sourceNames, taskSources, sourceCounts, tasks, totalHours, weakMetrics, loads,
     practicality: practicality ?? null,
     ragRetrieved: response.ragMetadata?.usedRag ?? null,
     telemetry: {

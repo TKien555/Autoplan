@@ -56,6 +56,29 @@ describe('WBS evaluation', () => {
     expect(result.telemetry.inputTokens).toBe(300);
   });
 
+  it('separates input requirements from RAG and explains missing quotes', () => {
+    const base = response.tasks[0];
+    const linked = { ...base, sourceIds: [], evidence: [] };
+    const result = evaluateWbs({
+      ...response, tasks: [linked, base, { ...base, reqIds: [] }],
+      evaluationMetadata: { proposedQuotes: 0 },
+    }, input);
+    expect(result.sourceCounts).toEqual({ requirementsOnly: 1, ragOnly: 1, both: 1 });
+    expect(result.taskSources[0].requirements).toEqual([response.requirements[0]]);
+    const quoteMetric = report => report.groups.grounding.find(item => item.id === 'quotes');
+    expect(quoteMetric(result)).toMatchObject({ display: 'N/A', detail: expect.stringContaining('không đề xuất') });
+    for (const [retrievalStatus, explanation] of [
+      ['off', 'tắt RAG'], ['no_match', 'không tìm thấy'], ['error', 'gặp lỗi'],
+    ]) {
+      const report = evaluateWbs({
+        ...response, tasks: [linked], evaluationMetadata: { proposedQuotes: 0 },
+        ragMetadata: { retrievalStatus, usedRag: false },
+      }, input);
+      expect(report.sourceCounts).toEqual({ requirementsOnly: 1, ragOnly: 0, both: 0 });
+      expect(quoteMetric(report)).toMatchObject({ display: 'N/A', detail: expect.stringContaining(explanation) });
+    }
+  });
+
   it('detects invalid calendar dates and does not reward empty responses', () => {
     const invalid = { ...response, tasks: [{ ...response.tasks[0], dueDate: '2027-02-30' }] };
     expect(evaluateWbs(invalid, input).groups.feasibility.find(item => item.id === 'schedule').score).toBe(0);
