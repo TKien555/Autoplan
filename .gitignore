@@ -16,3 +16,15 @@ build/
 # Ignore command notes
 lenh.txt
 
+# Local data, binaries and generated benchmark files
+/backend/knowledge_base.db*
+/ngrok.exe
+__pycache__/
+__MACOSX/
+*.pyc
+/wbs_eval_suite/raw_datasets/
+/wbs_eval_suite/golden_set/
+/wbs_eval_suite/evaluation_report.json
+/AI_WBS_Automation_Testing/playwright-report/
+/AI_WBS_Automation_Testing/test-results/
+/AI_WBS_Automation_Testing/unit-report.html

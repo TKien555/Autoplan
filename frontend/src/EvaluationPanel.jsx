@@ -121,7 +121,7 @@ function Comparison({ baseline, withRag }) {
   );
 }
 
-export default function EvaluationPanel({ active, latest, requestBreakdown, onResize, isGenerating }) {
+export default function EvaluationPanel({ active, latest, requestBreakdown, onResize, isGenerating, view = 'benchmark', onViewChange }) {
   const [caseId, setCaseId] = useState(evaluationCases[0].id);
   const [history, setHistory] = useState([]);
   const [customCases, setCustomCases] = useState([]);
@@ -129,7 +129,6 @@ export default function EvaluationPanel({ active, latest, requestBreakdown, onRe
   const [comparisons, setComparisons] = useState({});
   const [running, setRunning] = useState('');
   const [failure, setFailure] = useState('');
-  const [view, setView] = useState('benchmark');
   const cases = [...evaluationCases, ...customCases];
   const scenario = cases.find(item => item.id === caseId);
   const scenarioRuns = history.filter(run => run.caseId === caseId);
@@ -198,8 +197,8 @@ export default function EvaluationPanel({ active, latest, requestBreakdown, onRe
   return (
     <section hidden={!active} className="pu-evaluation" aria-label="Đánh giá WBS">
       <div className="pu-eval-actions" aria-label="Chọn nguồn đánh giá">
-        <button type="button" className="pu-tab-btn" aria-pressed={view === 'benchmark'} onClick={() => setView('benchmark')}>Bộ dữ liệu</button>
-        <button type="button" className="pu-tab-btn" aria-pressed={view === 'latest'} onClick={() => setView('latest')}>WBS vừa sinh</button>
+        <button type="button" className="pu-tab-btn" aria-pressed={view === 'benchmark'} onClick={() => onViewChange?.('benchmark')}>Bộ dữ liệu</button>
+        <button type="button" className="pu-tab-btn" aria-pressed={view === 'latest'} onClick={() => onViewChange?.('latest')}>WBS vừa sinh</button>
       </div>
       {view === 'latest' ? (
         latest ? <Report report={latest} /> : <p>Hãy sinh một WBS trong tab Lập kế hoạch để xem đánh giá.</p>
@@ -215,6 +214,7 @@ export default function EvaluationPanel({ active, latest, requestBreakdown, onRe
             <input id="evaluation-import" type="file" accept=".json,application/json" disabled={Boolean(running) || importing} onChange={importCases} />
           </div>
           <p>{scenario.description}</p>
+          {scenario.dataset && <p>Nguồn ca mẫu · <a href={scenario.dataset.url} target="_blank" rel="noreferrer">{scenario.dataset.name}</a></p>}
           <p>{scenario.sprintCount} Sprint × {scenario.sprintDurationDays} ngày · Bắt đầu 04/01/2027 · Nhóm Dev và QA mẫu</p>
           <details className="pu-eval-detail">
             <summary>Yêu cầu đối chiếu</summary>

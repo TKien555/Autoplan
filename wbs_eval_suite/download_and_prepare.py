@@ -14,10 +14,7 @@ from schemas import (
     TeamMember, RagChunk
 )
 
-DATA_DIR = Path("./raw_datasets")
-GOLDEN_DIR = Path("./golden_set")
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-GOLDEN_DIR.mkdir(parents=True, exist_ok=True)
+DATA_DIR = Path(__file__).resolve().parent / "raw_datasets"
 
 
 class DatasetDownloader:
@@ -206,7 +203,10 @@ class GoldenSetBuilder:
         for idx, (grp_name, group) in enumerate(list(df.groupby(group_col))[:limit], start=1):
             features, srs_lines = [], []
             for _, row in group.head(25).iterrows():
-                story_txt = str(row[story_col]).strip()
+                if {"us_actor", "us_action", "us_expected_outcome"}.issubset(row.index):
+                    story_txt = f"As {row['us_actor']}, I want to {row['us_action']} so that {row['us_expected_outcome']}"
+                else:
+                    story_txt = str(row[story_col]).strip()
                 deliv_txt = str(row[deliv_col]).strip()
                 srs_lines.append(f"- {story_txt}")
                 features.append(ReferenceFeature(

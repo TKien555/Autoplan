@@ -12,7 +12,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const JSON_FILE = path.join(__dirname, 'knowledge_base.json');
-const DB_FILE = path.join(__dirname, 'knowledge_base.db');
+const DB_FILE = process.env.SQLITE_PATH || path.join(__dirname, 'knowledge_base.db');
 
 const EMBEDDING_MODEL = (process.env.EMBEDDING_MODEL || 'gemini-embedding-2').trim();
 const EMBEDDING_DIM = Number(process.env.EMBEDDING_DIM) || 768;

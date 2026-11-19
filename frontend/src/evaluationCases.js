@@ -55,6 +55,31 @@ export const evaluationCases = [
       { label: 'Email sau khi đổi mật khẩu', terms: ['email thông báo', 'gửi email thông báo', 'notification email', 'email notification'] },
     ],
   },
+  {
+    id: 'storyseek-stackgres-backup',
+    title: 'StackGres · Ngăn các bản sao lưu chạy chồng',
+    description: 'Điều chỉnh CronJob sao lưu PostgreSQL của StackGres để các lượt sao lưu không chạy đồng thời. Bảo đảm lượt đang chạy hoàn thành bình thường khi đến lịch kế tiếp. Kiểm thử trường hợp tác vụ chạy lâu hơn khoảng cách giữa hai lịch.',
+    dataset: { name: 'StorySeek · #2', url: 'https://huggingface.co/datasets/SoftACE/StorySeek' },
+    sprintCount: 1,
+    sprintDurationDays: 7,
+    requirements: [
+      { label: 'Áp dụng concurrencyPolicy: Forbid cho CronJob', allOf: [['concurrencyPolicy', 'concurrency policy'], ['forbid']] },
+      { label: 'Kiểm thử hai lượt theo lịch bị chồng', terms: ['chạy chồng', 'chạy đồng thời', 'chạy song song', 'overlapping jobs', 'concurrent backups'] },
+    ],
+  },
+  {
+    id: 'storyseek-stackgres-parameters',
+    title: 'StackGres · Hiển thị tham số PostgreSQL',
+    description: 'Cập nhật biểu mẫu SGPostgresConfig trong web console. Người dùng cần xem các tham số tùy chỉnh, giá trị mặc định và nhận biết đâu là giá trị được thiết lập theo phiên bản StackGres. Kiểm thử cả cấu hình tùy chỉnh và cấu hình rỗng.',
+    dataset: { name: 'StorySeek · #4', url: 'https://huggingface.co/datasets/SoftACE/StorySeek' },
+    sprintCount: 1,
+    sprintDurationDays: 7,
+    requirements: [
+      { label: 'Biểu mẫu SGPostgresConfig', terms: ['SGPostgresConfig', 'SG Postgres Config'] },
+      { label: 'Hiển thị giá trị mặc định', terms: ['giá trị mặc định', 'default values'] },
+      { label: 'Đối chiếu phiên bản StackGres', terms: ['phiên bản StackGres', 'StackGres version'] },
+    ],
+  },
 ];
 
 export function readEvaluationCases(value) {

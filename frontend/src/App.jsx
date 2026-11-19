@@ -119,6 +119,7 @@ const App = () => {
   // State kết quả WBS & Kéo thả (Drag & Drop)
   const [tasks, setTasks] = useState([]);
   const [latestEvaluation, setLatestEvaluation] = useState(null);
+  const [evaluationView, setEvaluationView] = useState('benchmark');
   const [ragMetadata, setRagMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
   const [draggedTaskIndex, setDraggedTaskIndex] = useState(null);
@@ -1162,6 +1163,13 @@ const App = () => {
             </div>
           )}
 
+          {latestEvaluation && (
+            <button type="button" className="pu-tab-btn"
+              onClick={() => { setEvaluationView('latest'); setActiveTab('evaluation'); }}>
+              Xem đánh giá WBS vừa sinh · {latestEvaluation.score}/100
+            </button>
+          )}
+
           {/* Danh sách kết quả WBS gom nhóm theo Sprint */}
           {tasks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
@@ -1667,6 +1675,8 @@ const App = () => {
         requestBreakdown={requestBreakdown}
         onResize={resizeTrelloIframe}
         isGenerating={loading}
+        view={evaluationView}
+        onViewChange={setEvaluationView}
       />
 
       {/* TAB 2: PHÂN VAI TRÒ NHÓM */}

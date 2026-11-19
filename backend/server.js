@@ -97,7 +97,7 @@ function buildSprintSchedule(sprintPrefix, sprintCount, projectStartDate, sprint
 // ============================================================================
 // 1. KHỞI TẠO SQLITE WAL & CACHE VECTOR THEO BOARD
 // ============================================================================
-const DB_FILE = path.join(__dirname, 'knowledge_base.db');
+const DB_FILE = process.env.SQLITE_PATH || path.join(__dirname, 'knowledge_base.db');
 const db = new Database(DB_FILE);
 
 function initDatabase() {
@@ -1687,6 +1687,11 @@ app.post(
         }
     }
 );
+
+// Serve the built Power-Up and API on the same HTTPS origin behind the proxy.
+const frontendDist = process.env.FRONTEND_DIST || path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendDist));
+app.use('/api', (req, res) => res.status(404).json({ success: false, error: 'API không tồn tại.' }));
 
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {

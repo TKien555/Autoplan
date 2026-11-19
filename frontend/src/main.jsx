@@ -1,45 +1,45 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-
 const urlParams = new URLSearchParams(window.location.search);
 const isAppView = urlParams.get('view') === 'app';
 
 if (isAppView) {
-  // Khi Trello mở Iframe giao diện -> Render component App.jsx
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
+  void import('./planner.jsx');
 } else if (window.TrelloPowerUp) {
-  // Khi Trello nạp Iframe Connector chạy ngầm -> Đăng ký tính năng trên thẻ Trello
+  const appKey = import.meta.env.VITE_TRELLO_API_KEY;
+  const appName = import.meta.env.VITE_APP_NAME || 'AI WBS & RAG Planner';
+  const plannerUrl = './?view=app';
+  const icon = new URL('/favicon.svg', window.location.origin).href;
+
   window.TrelloPowerUp.initialize({
-    // Cách 1: Hiển thị trực tiếp một khung (Section) ở mặt sau mỗi thẻ Trello
-    'card-back-section': function (t, options) {
-      return {
-        title: '🤖 AI Planner & RAG (WBS)',
-        icon: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png', // Icon hiển thị trên thẻ
-        content: {
-          type: 'iframe',
-          url: t.signUrl('./?view=app'), // Trỏ vào giao diện React App.jsx
-          height: 350 // Chiều cao khởi tạo (sẽ tự co giãn bằng t.sizeTo)
-        }
-      };
+    'card-back-section': t => ({
+      title: appName,
+      icon,
+      content: {
+        type: 'iframe',
+        url: t.signUrl(plannerUrl),
+        height: 350
+      }
+    }),
+    'card-buttons': () => [{
+      icon,
+      text: 'Lập kế hoạch AI',
+      callback: t => t.popup({ title: appName, url: plannerUrl, height: 450 })
+    }],
+    'card-badges': async t => {
+      const meta = await t.get('card', 'shared', 'aiTaskMeta', null);
+      if (!meta) return [];
+      const badges = [];
+      if (meta.estimatedHours) {
+        const hours = Number(meta.estimatedHours);
+        badges.push({ text: `${hours}h`, color: hours > 16 ? 'red' : 'blue' });
+      }
+      if (meta.role) badges.push({ text: meta.role, color: 'green' });
+      if (['High', 'Critical'].includes(meta.priority)) badges.push({ text: meta.priority, color: 'red' });
+      if (meta.hasRag) badges.push({ text: 'RAG', color: 'purple' });
+      return badges;
     },
-    // Cách 2: Thêm nút bấm ở cột bên phải mặt sau thẻ Trello
-    'card-buttons': function (t, options) {
-      return [{
-        icon: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
-        text: 'Lập kế hoạch AI',
-        callback: function (t) {
-          return t.popup({
-            title: 'AI Task Breakdown & RAG',
-            url: './?view=app',
-            height: 450
-          });
-        }
-      }];
-    }
-  });
+    ...(appKey && {
+      'authorization-status': async t => ({ authorized: Boolean(await t.getRestApi().isAuthorized()) }),
+      'show-authorization': t => t.getRestApi().authorize({ scope: 'read,write', expiration: 'never' })
+    })
+  }, { appKey, appName });
 }
