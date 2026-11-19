@@ -1,0 +1,31 @@
+{
+  "name": "ai-wbs-rag-automation-testing",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Automation test suite for AI WBS & RAG Planner (React + Express + SQLite + Gemini + Trello)",
+  "scripts": {
+    "test": "npm run test:unit && npm run test:api && npm run test:e2e",
+    "test:unit": "vitest run --config vitest.config.js",
+    "test:unit:watch": "vitest --config vitest.config.js",
+    "test:api": "node --test tests/api/*.test.js",
+    "test:e2e": "playwright test --config=playwright.config.js",
+    "test:e2e:ui": "playwright test --ui --config=playwright.config.js",
+    "test:all": "npm run test:unit && npm run test:api && npm run test:e2e",
+    "report:e2e": "playwright show-report playwright-report",
+    "report:unit": "node -e \"console.log('Mở testing/unit-report.html bằng trình duyệt')\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@vitest/ui": "^3.2.7",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  }
+}

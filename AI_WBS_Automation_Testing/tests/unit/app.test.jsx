@@ -1,0 +1,261 @@
+import React from 'react';
+
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  vi,
+} from 'vitest';
+
+import {
+  render,
+  screen,
+  waitFor,
+  cleanup,
+} from '@testing-library/react';
+
+import userEvent from '@testing-library/user-event';
+
+import App from '../../../frontend/src/App.jsx';
+import { mockFetch } from '../fixtures/mock-api.js';
+
+// =====================================================
+// AI WBS & RAG Planner - React Component Tests
+// =====================================================
+
+describe('AI WBS & RAG Planner - React component tests', () => {
+
+  // ---------------------------------------------------
+  // Setup trước mỗi test
+  // ---------------------------------------------------
+  beforeEach(() => {
+    const { fetchMock } = mockFetch();
+
+    // Mock API fetch
+    vi.stubGlobal('fetch', vi.fn(fetchMock));
+
+    // Mock requestAnimationFrame
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      (callback) => setTimeout(callback, 0)
+    );
+  });
+
+  // ---------------------------------------------------
+  // Cleanup sau mỗi test
+  // ---------------------------------------------------
+  afterEach(() => {
+    // Xóa các component đã render
+    cleanup();
+
+    // Khôi phục các global đã mock
+    vi.unstubAllGlobals();
+
+    // Khôi phục các function mock
+    vi.restoreAllMocks();
+  });
+
+  // ===================================================
+  // UT-UI-01: Hiển thị màn hình lập kế hoạch mặc định
+  // ===================================================
+  it('UT-UI-01: hiển thị màn hình lập kế hoạch mặc định', () => {
+    render(<App />);
+
+    // Kiểm tra tiêu đề màn hình
+    expect(
+      screen.getByText(/Lập kế hoạch Đa Sprint/)
+    ).toBeInTheDocument();
+
+    // Kiểm tra ô nhập tên dự án
+    expect(
+      screen.getByPlaceholderText(
+        'Nhập tên công việc hoặc dự án lớn...'
+      )
+    ).toBeInTheDocument();
+
+    // Kiểm tra ô nhập yêu cầu nghiệp vụ
+    expect(
+      screen.getByPlaceholderText(
+        'Nhập chi tiết yêu cầu nghiệp vụ, phạm vi chức năng...'
+      )
+    ).toBeInTheDocument();
+  });
+
+  // ===================================================
+  // UT-UI-02: Điều hướng sang tab quản lý nhóm
+  // ===================================================
+  it('UT-UI-02: điều hướng sang tab quản lý nhóm', async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    // Nhấn nút Vai trò nhóm
+    const teamButton = screen.getByRole('button', {
+      name: /Vai trò nhóm/,
+    });
+
+    await user.click(teamButton);
+
+    // Kiểm tra nội dung quản lý nhóm
+    expect(
+      screen.getByText(/Phân vai trò thành viên trong Board/i)
+    ).toBeInTheDocument();
+  });
+
+  // ===================================================
+  // UT-UI-03: Điều hướng sang tab RAG
+  // ===================================================
+  it('UT-UI-03: điều hướng sang tab RAG và hiển thị hai chế độ nạp dữ liệu', async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    // Chuyển sang tab RAG
+    await user.click(
+      screen.getByRole('button', { name: /RAG/ })
+    );
+
+    // Kiểm tra chức năng tải file
+    expect(
+      screen.getByRole('button', { name: /Tải File/ })
+    ).toBeInTheDocument();
+
+    // Kiểm tra chức năng nhập văn bản trực tiếp
+    expect(
+      screen.getByRole('button', {
+        name: /Nhập văn bản trực tiếp/,
+      })
+    ).toBeInTheDocument();
+  });
+
+  // ===================================================
+  // UT-UI-04: Không cho gửi tài liệu khi nội dung rỗng
+  // ===================================================
+  it('UT-UI-04: không cho gửi tài liệu khi nội dung văn bản rỗng', async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    // Chuyển sang tab RAG
+    await user.click(
+      screen.getByRole('button', { name: /RAG/ })
+    );
+
+    // Chọn chế độ nhập văn bản trực tiếp
+    await user.click(
+      screen.getByRole('button', {
+        name: /Nhập văn bản trực tiếp/,
+      })
+    );
+
+    // Gửi tài liệu khi chưa nhập nội dung
+    await user.click(
+      screen.getByRole('button', {
+        name: /Nạp vào Bộ nhớ Tri thức/,
+      })
+    );
+
+    // Kiểm tra thông báo yêu cầu nhập nội dung
+    expect(
+      await screen.findByText(
+        /Vui lòng nhập nội dung tài liệu chuyên môn/
+      )
+    ).toBeInTheDocument();
+  });
+
+  // ===================================================
+  // UT-UI-05: Gửi tài liệu lên API thành công
+  // ===================================================
+  it('UT-UI-05: gửi nội dung tài liệu lên API và xử lý phản hồi thành công', async () => {
+    const user = userEvent.setup();
+
+    // Tạo mock API và lưu lịch sử request
+    const { fetchMock, calls } = mockFetch();
+
+    // Sử dụng mock API riêng cho test này
+    vi.stubGlobal('fetch', vi.fn(fetchMock));
+
+    render(<App />);
+
+    // Chuyển sang tab RAG
+    await user.click(
+      screen.getByRole('button', { name: /RAG/ })
+    );
+
+    // Chọn chế độ nhập văn bản trực tiếp
+    await user.click(
+      screen.getByRole('button', {
+        name: /Nhập văn bản trực tiếp/,
+      })
+    );
+
+    // Nhập tên tài liệu
+    const titleInput = screen.getByPlaceholderText(
+      'VD: Quy chuẩn API Backend & Database'
+    );
+
+    await user.clear(titleInput);
+    await user.type(titleInput, 'Quy chuẩn kiểm thử');
+
+    // Nhập nội dung tài liệu
+    const contentInput = screen.getByPlaceholderText(
+      'Dán nội dung kiến trúc, quy trình test, coding convention vào đây...'
+    );
+
+    await user.type(
+      contentInput,
+      'Mỗi API phải kiểm tra đầu vào và quyền truy cập.'
+    );
+
+    // Gửi tài liệu lên API
+    await user.click(
+      screen.getByRole('button', {
+        name: /Nạp vào Bộ nhớ Tri thức/,
+      })
+    );
+
+    // Kiểm tra API nhận được request POST /api/documents
+    await waitFor(() => {
+      const documentRequest = calls.some((call) => {
+        return (
+          call.url?.includes('/api/documents') &&
+          call.options?.method?.toUpperCase() === 'POST'
+        );
+      });
+
+      expect(documentRequest).toBe(true);
+    });
+  });
+
+  // ===================================================
+  // UT-UI-06: Bật/tắt chế độ sử dụng RAG
+  // ===================================================
+  it('UT-UI-06: bật/tắt chế độ sử dụng RAG', async () => {
+    const user = userEvent.setup();
+
+    render(<App />);
+
+    // Lấy checkbox sử dụng tri thức chuyên môn
+    const checkbox = screen.getByRole('checkbox', {
+      name: /Sử dụng tri thức chuyên môn/,
+    });
+
+    // Kiểm tra trạng thái mặc định
+    expect(checkbox).toBeChecked();
+
+    // Tắt chế độ RAG
+    await user.click(checkbox);
+
+    // Kiểm tra trạng thái sau khi tắt
+    expect(checkbox).not.toBeChecked();
+
+    // Bật lại chế độ RAG
+    await user.click(checkbox);
+
+    // Kiểm tra trạng thái sau khi bật
+    expect(checkbox).toBeChecked();
+  });
+
+});
