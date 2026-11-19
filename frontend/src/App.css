@@ -909,3 +909,82 @@
 .pu-file-input::file-selector-button:hover {
   background-color: var(--bg-hover);
 }
+.pu-evaluation {
+  font-size: 13px;
+}
+
+.pu-eval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0;
+}
+
+.pu-eval-actions button {
+  border: 1px solid var(--border-default);
+}
+
+.pu-eval-actions button[aria-pressed="true"] {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.pu-eval-actions button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.pu-eval-detail {
+  margin: 8px 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+.pu-eval-detail summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pu-eval-detail-body {
+  padding: 0 10px 8px;
+}
+
+.pu-eval-detail li {
+  margin-block: 4px;
+}
+
+.pu-eval-stats {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  padding: 0 10px;
+}
+
+.pu-eval-stats dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pu-eval-table {
+  overflow-x: auto;
+  margin-block: 12px;
+}
+
+.pu-eval-table table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.pu-eval-table caption,
+.pu-eval-table th,
+.pu-eval-table td {
+  padding: 6px;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.pu-eval-note {
+  color: var(--text-secondary);
+  font-size: 12px;
+}

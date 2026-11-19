@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './App.css';
+import EvaluationPanel from './EvaluationPanel.jsx';
+import { evaluateWbs } from './evaluateWbs.js';
 
 const API_BASE_URL = '/api';
 const DEFAULT_TRELLO_APP_KEY = import.meta.env?.VITE_TRELLO_API_KEY || '';
@@ -116,6 +118,7 @@ const App = () => {
 
   // State kết quả WBS & Kéo thả (Drag & Drop)
   const [tasks, setTasks] = useState([]);
+  const [latestEvaluation, setLatestEvaluation] = useState(null);
   const [ragMetadata, setRagMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
   const [draggedTaskIndex, setDraggedTaskIndex] = useState(null);
@@ -519,6 +522,15 @@ const App = () => {
     setIsOAuthConnected(false);
   };
 
+  const requestBreakdown = async input => {
+    const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
+    return fetchJsonWithTimeout(`${API_BASE_URL}/breakdown`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(input)
+    }, 125000);
+  };
+
   const handleBreakdown = async () => {
     if (loading) return;
     setErrorBanner('');
@@ -548,42 +560,32 @@ const App = () => {
       }));
 
       const rolesSummary = teamMembersPayload.map(m => `${m.fullName} (${m.role})`).join(', ');
-      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
-
-      const data = await fetchJsonWithTimeout(
-        `${API_BASE_URL}/breakdown`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            taskName: cardName.trim(),
-            description: description.trim(),
-            teamSize: teamMembersPayload.length || 1,
-            roles: rolesSummary,
-            teamMembers: teamMembersPayload,
-            methodology: 'Agile',
-            useRag,
-            sprintPrefix: sprintPrefix.trim() || 'Sprint',
-            sprintCount: countNum,
-            sprintStartDate: sprintStartDate || getTodayIso(),
-            sprintDurationDays: durationNum
-          })
-        },
-        125000
-      );
+      const input = {
+        taskName: cardName.trim(),
+        description: description.trim(),
+        teamSize: teamMembersPayload.length || 1,
+        roles: rolesSummary,
+        teamMembers: teamMembersPayload,
+        methodology: 'Agile',
+        useRag,
+        sprintPrefix: sprintPrefix.trim() || 'Sprint',
+        sprintCount: countNum,
+        sprintStartDate: sprintStartDate || getTodayIso(),
+        sprintDurationDays: durationNum
+      };
+      const data = await requestBreakdown(input);
 
       if (data.success) {
         const enriched = (data.tasks || []).map((t, i) => ({
           ...t,
           _uid: `task_${Date.now()}_${i}`,
           priority: t.priority || 'Medium',
-          subtasks: Array.isArray(t.subtasks) && t.subtasks.length > 0
-            ? t.subtasks
-            : ['Phân tích & thiết kế chi tiết', 'Triển khai code & Unit Test', 'Nghiệm thu (Acceptance Criteria)'],
+          subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
           sprint: t.sprint || plannedSprintSchedule[0]?.name || 'Sprint 1',
           startDate: t.startDate || sprintStartDate || getTodayIso(),
           dueDate: t.dueDate || addDaysIso(sprintStartDate, 2)
         }));
+        setLatestEvaluation(evaluateWbs(data, input));
         setTasks(enriched);
         setRagMetadata(data.ragMetadata);
       } else {
@@ -986,6 +988,13 @@ const App = () => {
           className={`pu-tab-btn ${activeTab === 'knowledge' ? 'active' : ''}`}
         >
           📚 RAG ({documents.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab('evaluation'); setErrorBanner(''); }}
+          className={`pu-tab-btn ${activeTab === 'evaluation' ? 'active' : ''}`}
+        >
+          📊 Đánh giá
         </button>
         <button
           type="button"
@@ -1651,6 +1660,14 @@ const App = () => {
           )}
         </div>
       )}
+
+      <EvaluationPanel
+        active={activeTab === 'evaluation'}
+        latest={latestEvaluation}
+        requestBreakdown={requestBreakdown}
+        onResize={resizeTrelloIframe}
+        isGenerating={loading}
+      />
 
       {/* TAB 2: PHÂN VAI TRÒ NHÓM */}
       {activeTab === 'team' && (
