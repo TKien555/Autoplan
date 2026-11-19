@@ -20,6 +20,10 @@ Trỏ ngrok hoặc reverse proxy HTTPS tới ứng dụng chạy ở cổng 3001
 Khi phát triển, chạy `npm run dev --prefix frontend` cùng backend. Vite chuyển tiếp `/api` đến cổng 3001. Nếu backend nằm ngoài checkout, đặt `FRONTEND_DIST` thành đường dẫn tuyệt đối tới `frontend/dist` để phục vụ bản build.
 
 
+## Lập kế hoạch theo thời lượng
+
+Nhập tiêu đề, mô tả các nhóm người dùng và luồng nghiệp vụ, phương pháp, loại sản phẩm, công nghệ và môi trường triển khai. Chọn tổng số tuần và số tuần mỗi Sprint. Ví dụ với website bán hàng dùng Scrum, ReactJS, Node.js, ExpressJS, PostgreSQL và Cloud Server, 12 tuần với nhịp 2 tuần tạo 6 Sprint. Dự án 15 tuần với nhịp 2 tuần tạo 8 Sprint, trong đó Sprint cuối dài 1 tuần. Bật tùy chọn đề xuất nhân sự để xem số người và lý do theo vai trò.
+
 ## Đánh giá WBS
 
 Sau khi sinh WBS trong Trello, chọn **Xem đánh giá WBS vừa sinh** hoặc tab **Đánh giá**. Báo cáo áp dụng cho phản hồi API trước khi chỉnh sửa WBS. Điểm tổng hợp gồm thực tế (35%), tin cậy (20%), độ phủ (30%) và kiểm chứng (15%). Thời gian xử lý và token hiển thị riêng nếu backend cung cấp.

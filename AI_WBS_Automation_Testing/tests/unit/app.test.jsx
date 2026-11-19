@@ -83,6 +83,19 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     ).toBeInTheDocument();
   });
 
+  it('tính hơn sáu Sprint và cắt Sprint cuối theo hạn dự án', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    expect(screen.getByText(/^6 Sprint · Kết thúc/)).toBeInTheDocument();
+    const duration = screen.getByLabelText('Tổng thời gian (tuần)');
+    await user.clear(duration);
+    await user.type(duration, '15');
+    expect(screen.getByText(/^8 Sprint · Kết thúc/)).toBeInTheDocument();
+    const last = screen.getByText('Sprint 8:').parentElement.textContent;
+    const dates = last.match(/\d{4}-\d{2}-\d{2}/g);
+    expect((Date.parse(dates[1]) - Date.parse(dates[0])) / 86400000 + 1).toBe(7);
+  });
+
   // ===================================================
   // UT-UI-02: Điều hướng sang tab quản lý nhóm
   // ===================================================

@@ -39,13 +39,16 @@ function dateMs(value) {
 
 function expectedSprints(input) {
   const firstDay = dateMs(input.sprintStartDate);
-  const prefix = input.sprintPrefix.trim();
+  const prefix = input.sprintPrefix.trim().slice(0, 40) || 'Sprint';
+  const totalDays = input.projectDurationWeeks == null
+    ? input.sprintCount * input.sprintDurationDays
+    : input.projectDurationWeeks * 7;
   return Array.from({ length: input.sprintCount }, (_, index) => ({
     name: input.sprintCount === 1 && /\d+$/.test(prefix)
       ? prefix
       : `${prefix.replace(/\s+\d+$/, '')} ${index + 1}`,
     firstDay: firstDay + index * input.sprintDurationDays * DAY_MS,
-    lastDay: firstDay + ((index + 1) * input.sprintDurationDays - 1) * DAY_MS,
+    lastDay: firstDay + (Math.min((index + 1) * input.sprintDurationDays, totalDays) - 1) * DAY_MS,
   }));
 }
 
@@ -86,12 +89,16 @@ export function evaluateWbs(response, input, { compareRag = false } = {}) {
   const totalHours = tasks.reduce((total, task) => total + (Number.isFinite(task.estimatedHours) ? task.estimatedHours : 0), 0);
   const names = new Map(tasks.map(task => [normalize(task.title), task]));
   const members = new Map((input.teamMembers || []).map(member => [member.id, member]));
-  const capacity = Math.max(1, Math.round(input.sprintDurationDays * 5 / 7)) * 8;
+  const sprintCapacity = new Map(sprints.map(sprint => [sprint.name,
+    Math.max(1, Math.round(((sprint.lastDay - sprint.firstDay) / DAY_MS + 1) * 5 / 7)) * 8]));
   const assignments = new Map();
   for (const task of tasks) {
     if (!members.has(task.assigneeId) || !sprintByName.has(task.sprint) || !Number.isFinite(task.estimatedHours)) continue;
     const key = JSON.stringify([task.assigneeId, task.sprint]);
-    assignments.set(key, (assignments.get(key) || 0) + task.estimatedHours);
+    assignments.set(key, {
+      hours: (assignments.get(key)?.hours || 0) + task.estimatedHours,
+      capacity: sprintCapacity.get(task.sprint),
+    });
   }
 
   const dependencies = tasks.flatMap(task => (Array.isArray(task.dependencies) ? task.dependencies : []).map(title => {
@@ -124,8 +131,8 @@ export function evaluateWbs(response, input, { compareRag = false } = {}) {
     ],
   };
   if (assignments.size) groups.realism.push(measure('capacity', 'Năng lực theo người và Sprint',
-    [...assignments.values()].filter(hours => hours <= capacity).length, assignments.size,
-    `Các cặp người–Sprint có giao việc, định mức ${Math.round(capacity)} giờ/người.`));
+    [...assignments.values()].filter(({ hours, capacity }) => hours <= capacity).length, assignments.size,
+    'So số giờ được giao với định mức theo thời lượng thực tế của từng Sprint.'));
   if (members.size) groups.realism.push(measure('role', 'Phân công đúng vai trò', tasks.filter(task =>
     members.has(task.assigneeId) && normalize(members.get(task.assigneeId).role) === normalize(task.role)
   ).length, items.length, 'So vai trò đã khai báo với vai trò của người được giao.'));

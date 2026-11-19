@@ -44,11 +44,10 @@ test('E2E-02: điều hướng giữa Planner, Team và RAG', async ({ page }) =
   await expect(page.getByPlaceholder('Nhập tên công việc hoặc dự án lớn...')).toBeVisible();
 });
 
-test('E2E-03: validate số Sprint nằm trong khoảng 1 đến 6', async ({ page }) => {
-  const sprintCount = page.locator('input[type="number"]').nth(0);
-  await sprintCount.fill('7');
-  await page.getByRole('button', { name: /Tự động phân rã|Chia lại Task/ }).click();
-  await expect(page.locator('.pu-error-banner')).toContainText(/Sprint phải từ 1 đến 6/i);
+test('E2E-03: tính số Sprint từ thời lượng dự án và hỗ trợ hơn 6 Sprint', async ({ page }) => {
+  await expect(page.getByRole('status').filter({ hasText: '6 Sprint' })).toBeVisible();
+  await page.getByLabel('Tổng thời gian (tuần)').fill('15');
+  await expect(page.getByRole('status').filter({ hasText: '8 Sprint' })).toBeVisible();
 });
 
 test('E2E-04: không cho tạo kế hoạch khi tên dự án ngắn hơn 3 ký tự', async ({ page }) => {

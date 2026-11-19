@@ -111,9 +111,20 @@ const App = () => {
   const [cardName, setCardName] = useState('');
   const [description, setDescription] = useState('');
   const [sprintPrefix, setSprintPrefix] = useState('Sprint');
-  const [sprintCount, setSprintCount] = useState(3);
+  const [projectDurationWeeks, setProjectDurationWeeks] = useState(12);
+  const [sprintDurationWeeks, setSprintDurationWeeks] = useState(2);
+  const [methodology, setMethodology] = useState('Scrum');
+  const [productType, setProductType] = useState('');
+  const [technologyStack, setTechnologyStack] = useState('');
+  const [deploymentTarget, setDeploymentTarget] = useState('');
+  const [recommendTeam, setRecommendTeam] = useState(true);
+  const [teamRecommendation, setTeamRecommendation] = useState([]);
+  const [identifiedFeatures, setIdentifiedFeatures] = useState([]);
+  const sprintDurationDays = Number(sprintDurationWeeks) * 7;
+  const projectDays = Number(projectDurationWeeks) * 7;
+  const validDuration = [projectDays, sprintDurationDays].every(days => Number.isSafeInteger(days) && days >= 7 && days % 7 === 0);
+  const sprintCount = validDuration ? Math.ceil(projectDays / sprintDurationDays) : 0;
   const [sprintStartDate, setSprintStartDate] = useState(getTodayIso());
-  const [sprintDurationDays, setSprintDurationDays] = useState(14);
   const [useRag, setUseRag] = useState(true);
 
   // State kết quả WBS & Kéo thả (Drag & Drop)
@@ -326,23 +337,17 @@ const App = () => {
   ]);
 
   const plannedSprintSchedule = useMemo(() => {
-    const cleanPref = (sprintPrefix || 'Sprint').trim().replace(/\s+\d+$/, '') || 'Sprint';
-    const count = Math.max(1, Math.min(6, Number(sprintCount) || 1));
-    const dur = Math.max(1, Math.min(60, Number(sprintDurationDays) || 14));
+    const prefix = sprintPrefix.trim().slice(0, 40) || 'Sprint';
     const base = sprintStartDate || getTodayIso();
+    const daysAvailable = (Date.parse('9999-12-31') - Date.parse(base)) / 86400000 + 1;
+    if (!sprintCount || !Number.isFinite(daysAvailable) || projectDays > daysAvailable) return [];
 
-    const list = [];
-    for (let i = 0; i < count; i++) {
-      const sStart = addDaysIso(base, i * dur);
-      const sEnd = addDaysIso(sStart, dur - 1);
-      list.push({
-        name: `${cleanPref} ${i + 1}`,
-        startDate: sStart,
-        endDate: sEnd
-      });
-    }
-    return list;
-  }, [sprintPrefix, sprintCount, sprintStartDate, sprintDurationDays]);
+    return Array.from({ length: sprintCount }, (_, index) => ({
+      name: sprintCount === 1 && /\d+$/.test(prefix) ? prefix : `${prefix.replace(/\s+\d+$/, '')} ${index + 1}`,
+      startDate: addDaysIso(base, index * sprintDurationDays),
+      endDate: addDaysIso(base, Math.min((index + 1) * sprintDurationDays, projectDays) - 1),
+    }));
+  }, [sprintPrefix, sprintCount, sprintStartDate, sprintDurationDays, projectDays]);
 
   const taskValidationList = useMemo(() => tasks.map(validateTaskItem), [tasks]);
   const hasAnyInvalidTask = useMemo(
@@ -385,16 +390,16 @@ const App = () => {
       map.get(sName).items.push({ task, originalIndex });
     });
 
-    return Array.from(map.values()).filter(
-      bucket => bucket.items.length > 0 || plannedSprintSchedule.some(p => p.name === bucket.sprintName)
-    );
+    return Array.from(map.values());
   }, [tasks, plannedSprintSchedule, sprintStartDate]);
 
   // Tính toán Tải công việc (Workload Capacity Bar) của từng nhân sự
   const memberWorkloadSummary = useMemo(() => {
     if (tasks.length === 0) return [];
-    const sprintCountActive = Math.max(1, groupedSprintBuckets.filter(b => b.items.length > 0).length);
-    const maxCapacityTotal = standardHoursPerSprint * sprintCountActive;
+    const capacities = new Map(plannedSprintSchedule.map(sprint => [
+      sprint.name,
+      ((Date.parse(sprint.endDate) - Date.parse(sprint.startDate)) / 86400000 + 1) * 40 / 7,
+    ]));
 
     const map = new Map();
     tasks.forEach(t => {
@@ -421,25 +426,26 @@ const App = () => {
     return Array.from(map.values()).map(item => {
       let peakSprintName = '';
       let peakSprintHours = 0;
-      for (const [sName, h] of Object.entries(item.bySprint)) {
-        if (h > peakSprintHours) {
-          peakSprintHours = h;
+      let peakCapacity = standardHoursPerSprint;
+      for (const [sName, hours] of Object.entries(item.bySprint)) {
+        const capacity = capacities.get(sName) ?? standardHoursPerSprint;
+        if (hours / capacity > peakSprintHours / peakCapacity) {
+          peakSprintHours = hours;
           peakSprintName = sName;
+          peakCapacity = capacity;
         }
       }
-      const sprintUtilPercent = Math.round((peakSprintHours / standardHoursPerSprint) * 100);
-      const totalUtilPercent = Math.round((item.totalHours / maxCapacityTotal) * 100);
+      const sprintUtilPercent = Math.round((peakSprintHours / peakCapacity) * 100);
       return {
         ...item,
         peakSprintName,
         peakSprintHours,
-        standardHoursPerSprint,
+        peakCapacity,
         sprintUtilPercent,
-        totalUtilPercent,
         isOverloaded: sprintUtilPercent > 100
       };
     });
-  }, [tasks, groupedSprintBuckets, standardHoursPerSprint]);
+  }, [tasks, plannedSprintSchedule, standardHoursPerSprint]);
 
   const availableSprintNames = useMemo(() => {
     const set = new Set(plannedSprintSchedule.map(s => s.name));
@@ -540,13 +546,8 @@ const App = () => {
     if (!cardName || cardName.trim().length < 3) {
       return setErrorBanner('Tiêu đề công việc phải có ít nhất 3 ký tự.');
     }
-    const countNum = Number(sprintCount);
-    if (Number.isNaN(countNum) || countNum < 1 || countNum > 6) {
-      return setErrorBanner('Số lượng Sprint phải từ 1 đến 6.');
-    }
-    const durationNum = Number(sprintDurationDays);
-    if (Number.isNaN(durationNum) || durationNum < 1 || durationNum > 60) {
-      return setErrorBanner('Thời lượng mỗi Sprint phải từ 1 đến 60 ngày.');
+    if (!plannedSprintSchedule.length) {
+      return setErrorBanner('Nhập số tuần dự án và số tuần mỗi Sprint là số nguyên dương, trong phạm vi lịch hỗ trợ.');
     }
 
     setLoading(true);
@@ -568,12 +569,18 @@ const App = () => {
         teamSize: teamMembersPayload.length || 1,
         roles: rolesSummary,
         teamMembers: teamMembersPayload,
-        methodology: 'Agile',
+        methodology,
+        productType: productType.trim(),
+        technologyStack: technologyStack.trim(),
+        deploymentTarget: deploymentTarget.trim(),
+        recommendTeam,
+        projectDurationWeeks: Number(projectDurationWeeks),
+        sprintDurationWeeks: Number(sprintDurationWeeks),
         useRag,
         sprintPrefix: sprintPrefix.trim() || 'Sprint',
-        sprintCount: countNum,
+        sprintCount,
         sprintStartDate: sprintStartDate || getTodayIso(),
-        sprintDurationDays: durationNum
+        sprintDurationDays
       };
       const data = await requestBreakdown(input);
 
@@ -589,6 +596,8 @@ const App = () => {
         }));
         setEvaluationRun({ input, boardId, report: evaluateWbs(data, input) });
         setTasks(enriched);
+        setIdentifiedFeatures(Array.isArray(data.identifiedFeatures) ? data.identifiedFeatures : []);
+        setTeamRecommendation(Array.isArray(data.teamRecommendation) ? data.teamRecommendation : []);
         setRagMetadata(data.ragMetadata);
       } else {
         setErrorBanner(data.error || 'Có lỗi xảy ra từ máy chủ AI.');
@@ -613,7 +622,7 @@ const App = () => {
               ...task,
               sprint: value,
               startDate: matchedSchedule.startDate,
-              dueDate: addDaysIso(matchedSchedule.startDate, Math.min(3, Number(sprintDurationDays) - 1))
+              dueDate: [addDaysIso(matchedSchedule.startDate, 3), matchedSchedule.endDate].sort()[0]
             };
           }
         }
@@ -717,7 +726,7 @@ const App = () => {
       estimatedHours: 4,
       sprint: chosenSprint,
       startDate: baseStart,
-      dueDate: addDaysIso(baseStart, 2),
+      dueDate: matchedSchedule ? [addDaysIso(baseStart, 2), matchedSchedule.endDate].sort()[0] : addDaysIso(baseStart, 2),
       referenceSource: 'Thêm thủ công'
     };
     setTasks(prev => [...prev, newTask]);
@@ -729,6 +738,8 @@ const App = () => {
 
   const handleResetTasks = () => {
     setTasks([]);
+    setTeamRecommendation([]);
+    setIdentifiedFeatures([]);
     setRagMetadata(null);
     setPushSuccessMsg('');
     setFailedCards([]);
@@ -1042,6 +1053,21 @@ const App = () => {
             />
           </div>
 
+          <div className="pu-sprint-grid">
+            <label className="pu-form-group">Phương pháp
+              <input className="pu-input" value={methodology} onChange={e => setMethodology(e.target.value)} placeholder="Scrum" maxLength={50} />
+            </label>
+            <label className="pu-form-group">Loại sản phẩm
+              <input className="pu-input" value={productType} onChange={e => setProductType(e.target.value)} placeholder="Web Application" maxLength={100} />
+            </label>
+            <label className="pu-form-group">Công nghệ
+              <input className="pu-input" value={technologyStack} onChange={e => setTechnologyStack(e.target.value)} placeholder="ReactJS, Node.js, ExpressJS, PostgreSQL" maxLength={300} />
+            </label>
+            <label className="pu-form-group">Triển khai
+              <input className="pu-input" value={deploymentTarget} onChange={e => setDeploymentTarget(e.target.value)} placeholder="Cloud Server" maxLength={150} />
+            </label>
+          </div>
+
           {/* Cấu hình Lộ trình Đa Sprint */}
           <div className="pu-sprint-config-box">
             <div className="pu-section-title">
@@ -1058,17 +1084,10 @@ const App = () => {
                   className="pu-input"
                 />
               </div>
-              <div style={{ flex: '0 0 90px' }}>
-                <label className="pu-sub-label">Số Sprint (1-6):</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="6"
-                  value={sprintCount}
-                  onChange={(e) => setSprintCount(e.target.value)}
-                  className="pu-input"
-                />
-              </div>
+              <label className="pu-form-group">Tổng thời gian (tuần)
+                <input type="number" min="1" step="1" value={projectDurationWeeks}
+                  onChange={e => setProjectDurationWeeks(e.target.value)} className="pu-input" />
+              </label>
               <div style={{ flex: '1 1 125px' }}>
                 <label className="pu-sub-label">Ngày bắt đầu dự án:</label>
                 <input
@@ -1078,25 +1097,24 @@ const App = () => {
                   className="pu-input"
                 />
               </div>
-              <div style={{ flex: '0 0 95px' }}>
-                <label className="pu-sub-label">Ngày / Sprint:</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="60"
-                  value={sprintDurationDays}
-                  onChange={(e) => setSprintDurationDays(e.target.value)}
-                  className="pu-input"
-                />
-              </div>
+              <label className="pu-form-group">Số tuần mỗi Sprint
+                <input type="number" min="1" step="1" value={sprintDurationWeeks}
+                  onChange={e => setSprintDurationWeeks(e.target.value)} className="pu-input" />
+              </label>
             </div>
 
+            <p role="status">
+              {plannedSprintSchedule.length > 0
+                ? `${sprintCount} Sprint · Kết thúc ${plannedSprintSchedule.at(-1).endDate}`
+                : 'Nhập thời lượng hợp lệ để xem lịch Sprint.'}
+            </p>
             <div className="pu-chip-list">
-              {plannedSprintSchedule.map((s) => (
+              {plannedSprintSchedule.slice(0, 8).map(s => (
                 <span key={s.name} className="pu-sprint-chip">
                   <strong>{s.name}:</strong> {s.startDate} → {s.endDate}
                 </span>
               ))}
+              {sprintCount > 8 && <span className="pu-sprint-chip">+{sprintCount - 8} Sprint trong kế hoạch</span>}
             </div>
           </div>
 
@@ -1110,6 +1128,10 @@ const App = () => {
                 ✏️ Chỉnh sửa vai trò
               </button>
             </div>
+            <label className="pu-checkbox-label">
+              <input type="checkbox" checked={recommendTeam} onChange={e => setRecommendTeam(e.target.checked)} />
+              AI đề xuất số lượng nhân sự theo vai trò
+            </label>
             {boardMembers.length === 0 ? (
               <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
                 Đang đọc danh sách thành viên từ Board Trello (hoặc chế độ Local)...
@@ -1152,6 +1174,22 @@ const App = () => {
                 : `⚡ Tự động phân rã & Chia lộ trình ${sprintCount} Sprint`}
           </button>
 
+          {identifiedFeatures.length > 0 && (
+            <details className="pu-eval-detail">
+              <summary>Phạm vi AI đã phân tích · {identifiedFeatures.length} hạng mục</summary>
+              <ul>{identifiedFeatures.map(feature => <li key={feature}>{feature}</li>)}</ul>
+            </details>
+          )}
+
+          {teamRecommendation.length > 0 && (
+            <div className="pu-team-box">
+              <h4>Nhân sự AI đề xuất · {teamRecommendation.reduce((total, item) => total + item.count, 0)} người</h4>
+              <ul>{teamRecommendation.map(({ role, count, reason }, index) =>
+                <li key={`${role}-${index}`}><strong>{count} × {role}</strong>{reason && ` — ${reason}`}</li>
+              )}</ul>
+            </div>
+          )}
+
           {ragMetadata && (
             <div className="pu-rag-banner">
               {ragMetadata.usedRag ? (
@@ -1177,7 +1215,7 @@ const App = () => {
               {/* Thanh Cảnh báo Tải Nhân Sự (Workload Capacity Bar) */}
               <div className="pu-workload-box">
                 <div className="pu-workload-header">
-                  <strong>📊 Cân bằng tải Nhân sự (Workload Capacity • Định mức {standardHoursPerSprint}h / Sprint):</strong>
+                  <strong>📊 Cân bằng tải Nhân sự (Workload Capacity • Định mức theo thời lượng Sprint):</strong>
                 </div>
                 <div className="pu-workload-list">
                   {memberWorkloadSummary.map((mw) => {
@@ -1195,7 +1233,7 @@ const App = () => {
                             <strong>👤 {mw.name}</strong> <span className="pu-muted-inline">({mw.role})</span>
                           </span>
                           <span className={`pu-workload-badge ${statusClass}`}>
-                            Đỉnh tải {mw.peakSprintName}: {mw.peakSprintHours.toFixed(1)}h / {mw.standardHoursPerSprint}h ({mw.sprintUtilPercent}%)
+                            Đỉnh tải {mw.peakSprintName}: {mw.peakSprintHours.toFixed(1)}h / {mw.peakCapacity}h ({mw.sprintUtilPercent}%)
                             {mw.isOverloaded ? ' ⚠️ Quá tải!' : ''} • Tổng: {mw.totalHours.toFixed(1)}h
                           </span>
                         </div>
