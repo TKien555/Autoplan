@@ -1,0 +1,39 @@
+# config.yaml
+weights:
+  A_practicality: 0.35
+  B_reliability: 0.30
+  C_coverage: 0.20
+  D_verifiability: 0.15
+
+judge_max_weight_per_group: 0.20
+group_pass_threshold: 0.80
+n_runs_per_mode: 3
+
+thresholds:
+  # Nhóm A: Thực tế
+  capacity_overload_users: 0        # 0 người vượt 100% định mức
+  dependency_violations: 0          # 0 vi phạm phụ thuộc
+  mmre_max: 0.40                    # MMRE <= 0.4
+  task_size_4_16h_min: 0.80         # >= 80% task nằm trong 4-16h
+  buffer_ratio_min: 0.15            # 15% - 25% tổng giờ
+  buffer_ratio_max: 0.25
+  role_match_min: 0.90              # >= 90%
+  judge_practicality_min: 4.0       # >= 4.0 / 5.0
+
+  # Nhóm B: Tin cậy
+  jaccard_consistency_min: 0.70     # >= 0.7
+  hours_cv_max: 0.15                # Biến thiên tổng giờ <= 15%
+  verified_citation_min: 0.98       # >= 98%
+  ungrounded_numbers_max: 0         # Bắt buộc = 0
+  valid_json_first_pass_min: 0.95   # >= 95%
+
+  # Nhóm C: Phủ và rõ
+  req_coverage_min: 0.95            # >= 95%
+  probe_coverage_min: 0.90          # >= 90%
+  testable_ac_min: 0.85             # >= 85%
+  feature_recall_min: 0.85          # >= 0.85
+  feature_precision_min: 0.75       # >= 0.75
+
+  # Nhóm D: Kiểm chứng và hiệu quả
+  task_with_source_min: 0.90        # >= 90%
+  latency_p95_budget_sec: 30.0
