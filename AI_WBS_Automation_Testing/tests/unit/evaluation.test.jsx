@@ -2,11 +2,12 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import EvaluationPanel from '../../../frontend/src/EvaluationPanel.jsx';
-import { evaluateWbs } from '../../../frontend/src/evaluateWbs.js';
-import { evaluationCases, readEvaluationCases } from '../../../frontend/src/evaluationCases.js';
+import { evaluateWbs, findSimilarProjects } from '../../../wbs_eval_suite/evaluateWbs.mjs';
 
-const scenario = evaluationCases[3];
+const sourceName = 'Chính sách khôi phục mật khẩu';
 const input = {
+  taskName: 'Khôi phục mật khẩu theo chính sách nội bộ',
+  description: 'Lập kế hoạch khôi phục mật khẩu, bao gồm xử lý yêu cầu, đổi mật khẩu và kiểm thử theo chính sách.',
   sprintPrefix: 'Sprint',
   sprintCount: 2,
   sprintDurationDays: 7,
@@ -32,17 +33,17 @@ const response = {
     dueDate: '2027-01-06',
     subtasks: ['Tạo yêu cầu đặt lại'],
     acceptanceCriteria: ['Given a link When opened twice Then the second use fails'],
-    evidence: [{ ref: 'C1', quote: 'Liên kết đặt lại mật khẩu hết hạn sau 20 phút', docName: scenario.source.name }],
+    evidence: [{ ref: 'C1', quote: 'Liên kết đặt lại mật khẩu hết hạn sau 20 phút', docName: sourceName }],
   }],
-  ragMetadata: { usedRag: true, matchedChunks: [{ docName: scenario.source.name }] },
+  ragMetadata: { usedRag: true, matchedChunks: [{ docName: sourceName }] },
   evaluationMetadata: { model: 'test-model', directJson: true, proposedQuotes: 2, verifiedQuotes: 1, inputTokens: 300, outputTokens: 100, latencyMs: 250 },
 };
 
 describe('WBS evaluation', () => {
   it('scores only observable coverage and verified evidence', () => {
-    const result = evaluateWbs(response, input, scenario);
-    expect(result.coverage.map(item => item.matched)).toEqual([true, true, false, false]);
-    expect(result.expectedSourceFound).toBe(true);
+    const result = evaluateWbs(response, input);
+    expect(result.similarProjects[0]).toMatchObject({ id: 'account-rag', matched: 2, total: 4 });
+    expect(result.sourceNames).toEqual([sourceName]);
     expect(result.groups.reliability.find(item => item.id === 'quotes').percent).toBe(50);
     expect(result.groups.verifiability[0].percent).toBe(100);
     expect(result.telemetry.inputTokens).toBe(300);
@@ -55,22 +56,23 @@ describe('WBS evaluation', () => {
     expect(evaluateWbs({ tasks: [] }, input).telemetry.inputTokens).toBeNull();
   });
 
-  it('validates imported cases before allowing a run', () => {
-    expect(readEvaluationCases([scenario])[0].title).toBe(scenario.title);
-    expect(() => readEvaluationCases([{ ...scenario, sprintCount: 7 }])).toThrow('Ca số 1');
-    expect(() => readEvaluationCases([{ ...scenario, requirements: [{ label: 'Invalid', terms: ['---'] }] }]))
-      .toThrow('Ca số 1');
+  it('selects reference projects by input and rejects unrelated projects', () => {
+    expect(findSimilarProjects(input)[0].project.id).toBe('account-rag');
+    expect(findSimilarProjects({ taskName: 'Thiết kế bản đồ thiên văn', description: 'Dự báo quỹ đạo vệ tinh.' })).toEqual([]);
+    expect(findSimilarProjects({ taskName: '' })).toEqual([]);
   });
 
-  it('runs a matched A/B pair and shows both reports', async () => {
+  it('compares the same project configuration with and without RAG', async () => {
     const requestBreakdown = vi.fn().mockResolvedValue(response);
-    render(<EvaluationPanel active requestBreakdown={requestBreakdown} onResize={() => {}} />);
-    fireEvent.change(screen.getByLabelText('Ca đánh giá'), { target: { value: scenario.id } });
-    fireEvent.click(screen.getByRole('button', { name: /So sánh A\/B/ }));
-    await waitFor(() => expect(screen.getByRole('table')).toBeVisible());
-    const [[before], [after]] = requestBreakdown.mock.calls;
-    expect(before).toEqual({ ...after, useRag: false });
-    expect(after.useRag).toBe(true);
-    expect(screen.getByText('Lịch sử trong phiên (2)')).toBeInTheDocument();
+    const props = { active: true, latest: evaluateWbs(response, input), requestBreakdown, onResize: () => {} };
+    const { rerender } = render(<EvaluationPanel {...props} run={{ input }} />);
+    const comparison = () => screen.queryByRole('table', { name: /So sánh cặp A\/B/ });
+    expect(screen.queryByLabelText('Ca đánh giá')).not.toBeInTheDocument();
+    expect(screen.getByText('Dự án tương tự')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /So sánh RAG và không RAG/ }));
+    await waitFor(() => expect(comparison()).toBeVisible());
+    expect(requestBreakdown.mock.calls).toEqual([[{ ...input, useRag: false }], [input]]);
+    rerender(<EvaluationPanel {...props} run={{ input: { ...input, taskName: 'Dự án khác' } }} />);
+    expect(comparison()).not.toBeInTheDocument();
   });
 });

@@ -1,8 +1,30 @@
+import { referenceProjects } from './referenceProjects.mjs';
+
 const DAY_MS = 86_400_000;
 
 const normalize = value => String(value ?? '').toLowerCase()
   .normalize('NFD').replace(/\p{M}/gu, '').replace(/đ/g, 'd')
   .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+
+const stopWords = new Set('va voi khi cho trong cua theo cac mot de tu co thi tren duoc he thong kiem thu thuc hien xu ly them tinh nang project for with from that the and into must should feature test'.split(' '));
+const projectTokens = text => new Set(normalize(text).split(' ').filter(word =>
+  word.length > 1 && !stopWords.has(word) && /\p{L}/u.test(word)
+));
+
+const indexedProjects = referenceProjects.map(project => ({
+  project,
+  tokens: projectTokens(`${project.title} ${project.description}`),
+}));
+
+export function findSimilarProjects(input) {
+  const tokens = projectTokens(`${input.taskName ?? ''} ${input.description ?? ''}`);
+  return indexedProjects.flatMap(({ project, tokens: reference }) => {
+    const common = [...tokens].filter(word => reference.has(word)).length;
+    const similarity = common / Math.sqrt(tokens.size * reference.size);
+    if (common < 2 || similarity < 0.25) return [];
+    return [{ project, similarity }];
+  }).sort((a, b) => b.similarity - a.similarity).slice(0, 3);
+}
 
 const isText = value => typeof value === 'string' && Boolean(value.trim());
 const hasTextList = value => Array.isArray(value) && value.length > 0 && value.every(isText);
@@ -40,7 +62,7 @@ function taskMatches(task, terms) {
   ));
 }
 
-export function evaluateWbs(response, input, scenario) {
+export function evaluateWbs(response, input, { compareRag = false } = {}) {
   const items = Array.isArray(response.tasks) ? response.tasks : [];
   const tasks = items.filter(task => task && typeof task === 'object' && !Array.isArray(task));
   const sprints = expectedSprints(input);
@@ -59,7 +81,7 @@ export function evaluateWbs(response, input, scenario) {
   });
 
   const metadata = response.evaluationMetadata || {};
-  const evidenceApplicable = (Boolean(scenario) || input.useRag === true)
+  const evidenceApplicable = (compareRag || input.useRag === true)
     && (Number.isInteger(metadata.verifiedQuotes) || tasks.some(task => Array.isArray(task.evidence)));
   const totalHours = tasks.reduce((total, task) => total + (Number.isFinite(task.estimatedHours) ? task.estimatedHours : 0), 0);
   const names = new Map(tasks.map(task => [normalize(task.title), task]));
@@ -114,22 +136,23 @@ export function evaluateWbs(response, input, scenario) {
   if (metadata.proposedQuotes > 0) groups.reliability.push(measure('quotes', 'Trích dẫn khớp nguyên văn',
     metadata.verifiedQuotes, metadata.proposedQuotes, 'So nguyên văn với đoạn tài liệu được gắn mã.'));
 
-  const coverage = scenario?.requirements.map(requirement => ({
-    label: requirement.label,
-    matched: requirement.allOf
-      ? requirement.allOf.every(terms => tasks.some(task => taskMatches(task, terms)))
-      : tasks.some(task => taskMatches(task, requirement.terms)),
-  })) ?? [];
-  if (coverage.length) {
-    groups.coverage.push(measure('coverage', 'Độ bao phủ theo từ khóa', coverage.filter(item => item.matched).length,
-      coverage.length, 'Đối chiếu từ khóa trong tiêu đề, mô tả, bước thực hiện và tiêu chí nghiệm thu.'));
-  }
+  const similarProjects = findSimilarProjects(input).map(({ project, similarity }) => {
+    const requirements = project.requirements.map(requirement => ({
+      label: requirement.label,
+      matched: requirement.allOf
+        ? requirement.allOf.every(terms => tasks.some(task => taskMatches(task, terms)))
+        : tasks.some(task => taskMatches(task, requirement.terms)),
+    }));
+    return {
+      id: project.id, title: project.title, dataset: project.dataset,
+      similarity: Math.round(similarity * 100),
+      matched: requirements.filter(item => item.matched).length,
+      total: requirements.length,
+    };
+  });
 
   const matchedChunks = Array.isArray(response.ragMetadata?.matchedChunks) ? response.ragMetadata.matchedChunks : [];
   const sourceNames = [...new Set(matchedChunks.map(chunk => chunk?.docName).filter(isText))];
-  const expectedSourceFound = scenario?.source
-    ? sourceNames.some(name => normalize(name) === normalize(scenario.source.name))
-    : null;
   const groupScores = Object.fromEntries(Object.entries(groups).map(([key, criteria]) => {
     const applicable = criteria.filter(criterion => criterion.total);
     return [key, applicable.length
@@ -142,7 +165,8 @@ export function evaluateWbs(response, input, scenario) {
     / rated.reduce((sum, [key]) => sum + weights[key], 0)) : 0;
 
   return {
-    score, groups, groupScores, coverage, sourceNames, expectedSourceFound, tasks, totalHours,
+    score, groups, groupScores, similarProjects, sourceNames, tasks, totalHours,
+    ragRetrieved: response.ragMetadata?.usedRag ?? null,
     telemetry: {
       model: metadata.model ?? null,
       latencyMs: metadata.latencyMs ?? null,

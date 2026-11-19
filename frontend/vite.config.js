@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
 
@@ -14,6 +14,9 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    fs: {
+      allow: [searchForWorkspaceRoot(import.meta.dirname), fileURLToPath(new URL('../wbs_eval_suite', import.meta.url))]
+    },
     allowedHosts: true,
     proxy: {
       // Mọi request bắt đầu bằng /api sẽ được Vite chuyển thẳng sang Backend cổng 3001

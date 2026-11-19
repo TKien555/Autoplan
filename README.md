@@ -22,45 +22,10 @@ Khi phát triển, chạy `npm run dev --prefix frontend` cùng backend. Vite ch
 
 ## Đánh giá WBS
 
-Mở Planner tại `/?view=app`, chọn tab **Đánh giá**. **WBS vừa sinh** chấm phản hồi API trước khi bạn chỉnh sửa công việc, còn **Bộ dữ liệu** chạy ca mẫu độc lập với kế hoạch đang soạn. Khi chọn **So sánh A/B**, ứng dụng gửi hai yêu cầu sinh WBS với cùng đầu vào, nhóm mẫu và lịch, chỉ thay đổi cờ RAG. Ca khôi phục mật khẩu có văn bản tham chiếu để nạp vào RAG trước khi chạy. Lịch sử và ca đã nhập giữ trong phiên trang. Chạy cùng chế độ ba lần với cùng model để xem độ chồng lấn tiêu đề và biên độ tổng giờ. Sinh WBS dùng backend và thông tin xác thực Gemini/Trello theo cấu hình đang dùng.
+Sau khi sinh WBS trong Trello, chọn **Xem đánh giá WBS vừa sinh** hoặc tab **Đánh giá**. Báo cáo áp dụng cho phản hồi API trước khi chỉnh sửa WBS. Điểm tổng hợp gồm thực tế (35%), tin cậy (20%), độ phủ (30%) và kiểm chứng (15%). Thời gian xử lý và token hiển thị riêng nếu backend cung cấp.
 
-Điểm gồm thực tế (35%), tin cậy (20%), độ phủ (30%) và kiểm chứng (15%). Thời gian xử lý và số token của lần gọi Gemini trả kết quả được hiển thị riêng. Với dữ liệu cũ hoặc phép đo thiếu đầu vào, báo cáo hiển thị thiếu số liệu. Khớp từ khóa và trích dẫn nguyên văn là tín hiệu để rà soát. Chúng không chứng minh độ đúng nghiệp vụ hay sự phù hợp của dẫn chứng.
+**Dự án tương tự** tự chọn tối đa ba dự án đủ gần trong bộ dữ liệu tham chiếu. Hệ số cosine được tính trên tập từ đã chuẩn hóa từ tiêu đề và mô tả. Báo cáo cũng cho biết bao nhiêu yêu cầu của từng dự án tham chiếu có từ khóa xuất hiện trong WBS. Các chỉ số này đo mức tương đồng từ vựng. Khi không có dự án đủ gần, báo cáo sẽ hiển thị trạng thái tương ứng.
 
-### Mẫu dữ liệu đã gán nhãn
+**So sánh RAG và không RAG** gửi hai yêu cầu Gemini với cùng nội dung dự án, nhóm và lịch Sprint của WBS vừa sinh. Cặp so sánh chỉ thay đổi cờ RAG. Bảng hiển thị chênh lệch điểm, số yêu cầu tham chiếu khớp, token và độ trễ. Lượt có RAG dùng tài liệu hiện có của board.
 
-Mỗi ca gồm đầu vào và danh sách yêu cầu đối chiếu. Tùy chọn `source` cung cấp tên và nội dung cho dữ liệu RAG. Chọn tối đa 30 ca trong mỗi tệp JSON.
-
-```json
-[
-  {
-    "title": "Xuất báo cáo tồn kho",
-    "description": "Cho phép lọc theo kho trước khi xuất CSV.",
-    "sprintCount": 1,
-    "sprintDurationDays": 7,
-    "requirements": [
-      { "label": "REQ-01 · Lọc theo kho", "terms": ["lọc theo kho", "warehouse filter"] },
-      { "label": "REQ-02 · Xuất CSV", "terms": ["xuất csv", "export csv"] }
-    ],
-    "source": {
-      "name": "Quy tắc báo cáo",
-      "text": "Chỉ người có quyền quản lý kho mới được xuất báo cáo tồn kho."
-    }
-  }
-]
-```
-
-Bộ đi kèm có bốn ca tiếng Việt tự soạn và hai ca StackGres chuyển thể từ StorySeek #2 và #4. Có thể tuyển chọn và gán nhãn dữ liệu từ [PURE](https://zenodo.org/records/7118517) cho SRS, [NEODATASET](https://github.com/giseldo/neodataset) cho user story, [StorySeek](https://huggingface.co/datasets/SoftACE/StorySeek) cho mục tiêu và tác nhân, [SEOSS 33](https://doi.org/10.7910/DVN/PDDZ4Q) cho truy vết RAG, hoặc tham khảo [mẫu Trello](https://www.atlassian.com/project-management/templates). Story points của NEODATASET không được dùng làm số giờ thực tế. Các nguồn này cần gán nhãn trước khi dùng làm bộ đối chiếu WBS.
-
-
-## Benchmark Python tùy chọn
-
-`wbs_eval_suite/` là công cụ nghiên cứu riêng dùng OpenAI cho cả sinh WBS và LLM Judge. Tab Đánh giá của Power-Up chạy trên WBS Gemini mà ứng dụng trả về. Dùng bộ ca tích hợp hoặc nhập ca JSON để đánh giá chính Power-Up.
-
-Bộ benchmark Python đọc dữ liệu có sẵn trong `wbs_eval_suite/raw_datasets/` và dùng các ca giả lập nếu thư mục trống. Ví dụ với virtualenv và `OPENAI_API_KEY` đã được đặt:
-
-```sh
-python -m pip install -r wbs_eval_suite/requirements.txt
-python wbs_eval_suite/run_benchmark.py --limit 3
-```
-
-Dữ liệu tải về và báo cáo tạo ra được lưu cục bộ. Bản dữ liệu thô đã có trên Git ở commit `dbed0b7`. Các bản checkout đã chứa dữ liệu vẫn có thể dùng thư mục hiện tại hoặc chỉ định `--data-dir`. Benchmark Python có các phép quy đổi ước lượng thí nghiệm. Chỉ dùng giờ thực tế có nguồn để kiểm định độ chính xác ước lượng.
+Logic chấm và dữ liệu tham chiếu được tích hợp trong `wbs_eval_suite/` bằng JavaScript. Bộ tham chiếu gồm bốn dự án tự soạn và hai dự án chuyển thể từ [StorySeek](https://huggingface.co/datasets/SoftACE/StorySeek). Dữ liệu thô lịch sử có thể tìm tại commit `dbed0b7`.

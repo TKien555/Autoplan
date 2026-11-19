@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './App.css';
 import EvaluationPanel from './EvaluationPanel.jsx';
-import { evaluateWbs } from './evaluateWbs.js';
+import { evaluateWbs } from '../../wbs_eval_suite/evaluateWbs.mjs';
 
 const API_BASE_URL = '/api';
 const DEFAULT_TRELLO_APP_KEY = import.meta.env?.VITE_TRELLO_API_KEY || '';
@@ -118,8 +118,9 @@ const App = () => {
 
   // State kết quả WBS & Kéo thả (Drag & Drop)
   const [tasks, setTasks] = useState([]);
-  const [latestEvaluation, setLatestEvaluation] = useState(null);
-  const [evaluationView, setEvaluationView] = useState('benchmark');
+  const [evaluationRun, setEvaluationRun] = useState(null);
+  const currentEvaluation = evaluationRun?.boardId === boardId ? evaluationRun : null;
+  const latestEvaluation = currentEvaluation?.report;
   const [ragMetadata, setRagMetadata] = useState(null);
   const [loading, setLoading] = useState(false);
   const [draggedTaskIndex, setDraggedTaskIndex] = useState(null);
@@ -586,7 +587,7 @@ const App = () => {
           startDate: t.startDate || sprintStartDate || getTodayIso(),
           dueDate: t.dueDate || addDaysIso(sprintStartDate, 2)
         }));
-        setLatestEvaluation(evaluateWbs(data, input));
+        setEvaluationRun({ input, boardId, report: evaluateWbs(data, input) });
         setTasks(enriched);
         setRagMetadata(data.ragMetadata);
       } else {
@@ -1165,7 +1166,7 @@ const App = () => {
 
           {latestEvaluation && (
             <button type="button" className="pu-tab-btn"
-              onClick={() => { setEvaluationView('latest'); setActiveTab('evaluation'); }}>
+              onClick={() => setActiveTab('evaluation')}>
               Xem đánh giá WBS vừa sinh · {latestEvaluation.score}/100
             </button>
           )}
@@ -1675,8 +1676,7 @@ const App = () => {
         requestBreakdown={requestBreakdown}
         onResize={resizeTrelloIframe}
         isGenerating={loading}
-        view={evaluationView}
-        onViewChange={setEvaluationView}
+        run={currentEvaluation}
       />
 
       {/* TAB 2: PHÂN VAI TRÒ NHÓM */}

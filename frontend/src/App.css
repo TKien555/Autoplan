@@ -924,11 +924,6 @@
   border: 1px solid var(--border-default);
 }
 
-.pu-eval-actions button[aria-pressed="true"] {
-  color: var(--accent-primary);
-  border-color: var(--accent-primary);
-}
-
 .pu-eval-actions button:disabled {
   opacity: 0.55;
   cursor: wait;
