@@ -96,6 +96,38 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     expect((Date.parse(dates[1]) - Date.parse(dates[0])) / 86400000 + 1).toBe(7);
   });
 
+  it('refines once, shows the task source and counts acceptance only after review', async () => {
+    const user = userEvent.setup();
+    const breakdowns = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, options) => {
+      if (!url.endsWith('/breakdown')) return { ok: true, json: async () => ({ success: true, documents: [] }) };
+      const input = JSON.parse(options.body);
+      breakdowns.push(input);
+      const types = input.refinementFeedback ? ['testing', 'integration', 'bugfix'] : ['testing'];
+      return { ok: true, json: async () => ({
+        success: true,
+        requirements: [{ id: 'REQ-01', text: 'Giữ tồn kho khi đặt hàng.' }],
+        tasks: types.map(taskType => ({
+          title: `Kiểm tra tồn kho · ${taskType}`, taskType, description: 'Giữ hàng', reqIds: ['REQ-01'],
+          role: 'QA', priority: 'High', estimatedHours: 8, sprint: 'Sprint 1', startDate: input.sprintStartDate,
+          dueDate: input.sprintStartDate, pert: { o: 4, m: 8, p: 12 }, needsReview: false,
+          acceptanceCriteria: ['Khi đã hết hàng thì không giữ thêm'],
+        })),
+      }) };
+    }));
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: /Tự động phân rã/ }));
+    await waitFor(() => expect(screen.getAllByText('🟢 Có nguồn')).toHaveLength(3));
+    expect(breakdowns).toHaveLength(2);
+    expect(breakdowns[1].refinementFeedback.join(' ')).toContain('Task nền tảng');
+    await user.click(screen.getAllByText('Căn cứ và ước lượng')[0]);
+    expect(screen.getAllByText(/Giữ tồn kho khi đặt hàng/)[0]).toBeVisible();
+    await user.click(screen.getByRole('button', { name: /Xem đánh giá WBS vừa sinh/ }));
+    expect(screen.getByText('Task giữ nguyên · N/A')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Xác nhận đã duyệt WBS/ }));
+    expect(screen.getByText('Task giữ nguyên · 100% (3/3)')).toBeInTheDocument();
+  });
+
   // ===================================================
   // UT-UI-02: Điều hướng sang tab quản lý nhóm
   // ===================================================
@@ -127,7 +159,7 @@ describe('AI WBS & RAG Planner - React component tests', () => {
 
     // Chuyển sang tab RAG
     await user.click(
-      screen.getByRole('button', { name: /RAG/ })
+      screen.getByRole('button', { name: /RAG \(/ })
     );
 
     // Kiểm tra chức năng tải file
@@ -153,7 +185,7 @@ describe('AI WBS & RAG Planner - React component tests', () => {
 
     // Chuyển sang tab RAG
     await user.click(
-      screen.getByRole('button', { name: /RAG/ })
+      screen.getByRole('button', { name: /RAG \(/ })
     );
 
     // Chọn chế độ nhập văn bản trực tiếp
@@ -194,7 +226,7 @@ describe('AI WBS & RAG Planner - React component tests', () => {
 
     // Chuyển sang tab RAG
     await user.click(
-      screen.getByRole('button', { name: /RAG/ })
+      screen.getByRole('button', { name: /RAG \(/ })
     );
 
     // Chọn chế độ nhập văn bản trực tiếp

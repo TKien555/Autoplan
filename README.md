@@ -26,10 +26,14 @@ Nhập tiêu đề, mô tả các nhóm người dùng và luồng nghiệp vụ
 
 ## Đánh giá WBS
 
-Sau khi sinh WBS trong Trello, chọn **Xem đánh giá WBS vừa sinh** hoặc tab **Đánh giá**. Báo cáo áp dụng cho phản hồi API trước khi chỉnh sửa WBS. Điểm tổng hợp gồm thực tế (35%), tin cậy (20%), độ phủ (30%) và kiểm chứng (15%). Thời gian xử lý và token hiển thị riêng nếu backend cung cấp.
+Sau khi sinh WBS trong Trello, mở **Xem đánh giá WBS vừa sinh**. Báo cáo có bốn nhóm với trọng số Khả thi 35%, Đầy đủ 30%, Có căn cứ 20%, Chấp nhận 15%. Chỉ số thiếu dữ liệu là N/A và điểm được chia lại theo các nhóm có dữ liệu. Tỷ lệ sửa và xóa là thông tin theo dõi. Nhóm Chấp nhận được tính khi bấm **Xác nhận đã duyệt WBS** và so với bản sinh ban đầu. Task bổ sung thủ công nằm ngoài mẫu số.
+
+Mỗi task có badge **Có nguồn**, **Suy luận** hoặc **Cần xem lại**. Mục **Căn cứ và ước lượng** cho xem yêu cầu REQ được liên kết, tên tài liệu RAG, số đoạn và nguyên văn đã xác minh, cùng các giá trị PERT khi có. REQ được tách theo dòng hoặc câu của mô tả và liên kết bởi mô hình. Cổng chất lượng thử chỉnh sửa một lần theo các chỉ số chưa đạt, giữ bản trước nếu kết quả sau không cải thiện.
 
 **Dự án tương tự** tự chọn tối đa ba dự án đủ gần trong bộ dữ liệu tham chiếu. Hệ số cosine được tính trên tập từ đã chuẩn hóa từ tiêu đề và mô tả. Báo cáo cũng cho biết bao nhiêu yêu cầu của từng dự án tham chiếu có từ khóa xuất hiện trong WBS. Các chỉ số này đo mức tương đồng từ vựng. Khi không có dự án đủ gần, báo cáo sẽ hiển thị trạng thái tương ứng.
 
-**So sánh RAG và không RAG** gửi hai yêu cầu Gemini với cùng nội dung dự án, nhóm và lịch Sprint của WBS vừa sinh. Cặp so sánh chỉ thay đổi cờ RAG. Bảng hiển thị chênh lệch điểm, số yêu cầu tham chiếu khớp, token và độ trễ. Lượt có RAG dùng tài liệu hiện có của board.
+Tab **So sánh RAG** gửi hai yêu cầu Gemini với cùng nội dung dự án, nhóm và lịch Sprint của WBS vừa sinh. Cặp so sánh chỉ thay đổi cờ RAG. Bảng hiển thị chênh lệch điểm, số yêu cầu tham chiếu khớp, token và độ trễ. Lượt có RAG dùng tài liệu hiện có của board.
 
 Logic chấm và dữ liệu tham chiếu được tích hợp trong `wbs_eval_suite/` bằng JavaScript. Bộ tham chiếu gồm bốn dự án tự soạn và hai dự án chuyển thể từ [StorySeek](https://huggingface.co/datasets/SoftACE/StorySeek). Dữ liệu thô lịch sử có thể tìm tại commit `dbed0b7`.
+
+Đặt `WBS_JUDGE_MODEL` trong cấu hình backend nếu muốn thêm chấm thực tiễn ẩn danh cho cặp RAG/không RAG. Model Judge phải khác cả hai model sinh. Judge chiếm 10% nhóm Khả thi của báo cáo A/B khi có kết quả.

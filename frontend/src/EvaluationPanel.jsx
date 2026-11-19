@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { evaluateWbs } from '../../wbs_eval_suite/evaluateWbs.mjs';
 
-const GROUPS = {
-  realism: 'Thực tế',
-  reliability: 'Tin cậy',
-  coverage: 'Độ phủ',
-  verifiability: 'Kiểm chứng',
-};
-const numberText = value => value == null ? 'Chưa có số liệu' : value.toLocaleString('vi-VN');
+import { groups as GROUPS, practicalityWeight } from '../../wbs_eval_suite/criteria.mjs';
+
+const numberText = value => value == null ? 'N/A' : value.toLocaleString('vi-VN');
 const delta = (withRag, baseline) => {
   if (withRag == null || baseline == null) return '—';
   const difference = withRag - baseline;
@@ -18,21 +14,30 @@ function Report({ report }) {
   const { telemetry } = report;
   return (
     <div className="pu-eval-report">
-      <h4>Điểm tổng hợp {report.score}/100 · {report.tasks.length} công việc · {numberText(report.totalHours)} giờ</h4>
-      {Object.entries(GROUPS).map(([key, label]) => (
+      <h4>Điểm tổng hợp {report.score == null ? 'N/A' : `${report.score}/100`} · {report.tasks.length} công việc · {numberText(report.totalHours)} giờ</h4>
+      <div className="pu-eval-score-grid">
+        {Object.entries(GROUPS).map(([key, { label }]) => (
+          <div key={key}><strong>{label}</strong><span>{report.groupScores[key] == null ? 'N/A' : `${report.groupScores[key]}/100`}</span></div>
+        ))}
+      </div>
+      {Object.entries(GROUPS).map(([key, { label }]) => (
         <details key={key} className="pu-eval-detail">
-          <summary>{label} · {report.groupScores[key] ?? 'Chưa chấm'}{report.groupScores[key] != null && '/100'}</summary>
+          <summary>{label}</summary>
           <ul>
             {report.groups[key].map(item => (
               <li key={item.id}>
-                <strong>{item.label} · {item.total ? `${item.passed}/${item.total} (${item.percent}%)` : 'Chưa có dữ liệu'}</strong>
-                <div>{item.detail}</div>
+                <strong>{item.label} · {item.display}</strong>
+                {item.detail && <div>{item.detail}</div>}
+                {item.meetsTarget === false && <div>Chưa đạt mục tiêu {item.lower ? '≤' : '≥'} {item.target}%.</div>}
               </li>
             ))}
           </ul>
-          {key === 'verifiability' && (
+          {key === 'feasibility' && report.loads.length > 0 && (
+            <ul>{report.loads.map((load, index) => <li key={index}>{load}</li>)}</ul>
+          )}
+          {key === 'grounding' && (
             <div className="pu-eval-detail-body">
-              <p>Tài liệu đã truy xuất — {report.sourceNames.join(', ') || 'Không có'}</p>
+              <p>Tài liệu đã truy xuất · {report.sourceNames.join(', ') || 'N/A'}</p>
             </div>
           )}
         </details>
@@ -40,7 +45,7 @@ function Report({ report }) {
       <details className="pu-eval-detail" open>
         <summary>Hiệu quả</summary>
         <dl className="pu-eval-stats">
-          <dt>Model</dt><dd>{telemetry.model || 'Chưa có số liệu'}</dd>
+          <dt>Model</dt><dd>{telemetry.model || 'N/A'}</dd>
           <dt>Độ trễ máy chủ</dt><dd>{numberText(telemetry.latencyMs)}{telemetry.latencyMs != null && ' ms'}</dd>
           <dt>Token đầu vào</dt><dd>{numberText(telemetry.inputTokens)}</dd>
           <dt>Token đầu ra</dt><dd>{numberText(telemetry.outputTokens)}</dd>
@@ -85,7 +90,8 @@ function SimilarProjects({ projects }) {
 function Comparison({ baseline, withRag }) {
   const rows = [
     ['Điểm tổng hợp', baseline.score, withRag.score],
-    ...Object.entries(GROUPS).map(([key, label]) => [label, baseline.groupScores[key], withRag.groupScores[key]]),
+    ...Object.entries(GROUPS).map(([key, { label }]) => [label, baseline.groupScores[key], withRag.groupScores[key]]),
+    ['Thực tiễn theo Judge (/5)', baseline.practicality, withRag.practicality],
     ['Độ trễ (ms)', baseline.telemetry.latencyMs, withRag.telemetry.latencyMs],
     ['Token đầu vào', baseline.telemetry.inputTokens, withRag.telemetry.inputTokens],
     ['Token đầu ra', baseline.telemetry.outputTokens, withRag.telemetry.outputTokens],
@@ -104,6 +110,7 @@ function Comparison({ baseline, withRag }) {
             <td>{numberText(after)}</td><td>{delta(after, before)}</td></tr>
         ))}</tbody>
       </table>
+      {baseline.practicality != null && <p>Judge chấm hai WBS ẩn danh. Điểm Judge chiếm {practicalityWeight * 100}% nhóm Khả thi. Mục tiêu ≥ 4/5.</p>}
       {withRag.ragRetrieved === false && <p>Lượt có RAG chưa truy xuất được tài liệu liên quan.</p>}
       {(!baseline.telemetry.model || baseline.telemetry.model !== withRag.telemetry.model) && (
         <p>Model hai lượt khác nhau hoặc chưa xác định. Delta có thể chịu ảnh hưởng của model.</p>
@@ -112,52 +119,69 @@ function Comparison({ baseline, withRag }) {
   );
 }
 
-export default function EvaluationPanel({ active, latest, run, requestBreakdown, onResize, isGenerating }) {
+export default function EvaluationPanel({
+  active, mode = 'report', latest, run, requestBreakdown, requestJudge, onResize, isGenerating, onReview,
+}) {
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState(null);
-  const current = result?.run === run ? result : null;
+  const runKey = run?.response ?? run;
+  const current = result?.runKey === runKey ? result : null;
 
   useEffect(() => {
     if (active) onResize();
-  }, [active, latest, current, pending, onResize]);
+  }, [active, mode, latest, current, pending, onResize]);
 
   async function compare() {
     setPending(true);
     setResult(null);
     try {
-      const reports = [];
-      for (const useRag of [false, true]) {
-        const input = { ...run.input, useRag };
+      const inputs = [false, true].map(useRag => ({ ...run.input, useRag }));
+      const responses = [];
+      for (const input of inputs) {
         const response = await requestBreakdown(input);
         if (!response.success) throw new Error(response.error || 'Không thể sinh WBS để so sánh.');
-        reports.push(evaluateWbs(response, input, { compareRag: true }));
+        responses.push(response);
       }
-      setResult({ run, baseline: reports[0], withRag: reports[1] });
+      let scores;
+      if (requestJudge) {
+        try {
+          scores = await requestJudge(run.input, responses);
+        } catch {
+          // Code-based comparison remains available when the optional Judge fails.
+        }
+      }
+      const [baseline, withRag] = responses.map((response, index) =>
+        evaluateWbs(response, inputs[index], { practicality: scores?.[index] }));
+      setResult({ runKey, baseline, withRag });
     } catch (error) {
-      setResult({ run, error: error.message || 'Không thể so sánh WBS.' });
+      setResult({ runKey, error: error.message || 'Không thể so sánh WBS.' });
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <section hidden={!active} className="pu-evaluation" aria-label="Đánh giá WBS">
-      {latest && run ? (
+    <section hidden={!active} className="pu-evaluation" aria-label={mode === 'report' ? 'Đánh giá WBS' : 'So sánh RAG'}>
+      {!latest || !run ? <p>Hãy sinh WBS trong tab Lập kế hoạch trước.</p> : mode === 'report' ? (
         <>
           <h3>Đánh giá WBS · {run.input.taskName}</h3>
           <Report report={latest} />
-          <div className="pu-eval-actions">
-            <button type="button" className="pu-tab-btn" disabled={pending || isGenerating} onClick={compare}>
-              So sánh RAG và không RAG · 2 lượt sinh
-            </button>
-          </div>
+          <button type="button" className="pu-tab-btn" onClick={onReview} disabled={isGenerating}>
+            {run.reviewed ? 'Cập nhật kết quả duyệt' : 'Xác nhận đã duyệt WBS'}
+          </button>
+          <p className="pu-eval-note">Kết quả duyệt so sánh WBS hiện tại với bản AI sinh. Mục N/A được loại khỏi điểm.</p>
+          {run.refinement && <p className="pu-eval-note">{run.refinement}</p>}
+        </>
+      ) : (
+        <>
+          <h3>So sánh RAG · {run.input.taskName}</h3>
+          <button type="button" className="pu-tab-btn" disabled={pending || isGenerating} onClick={compare}>
+            So sánh RAG và không RAG · 2 lượt sinh
+          </button>
           {pending && <p role="status">Đang so sánh trên cùng đầu vào dự án…</p>}
           {current?.error && <p role="alert" className="pu-error-banner">{current.error}</p>}
           {current?.baseline && <Comparison baseline={current.baseline} withRag={current.withRag} />}
-          <p className="pu-eval-note">Điểm theo trọng số 35% thực tế, 20% tin cậy, 30% độ phủ, 15% kiểm chứng. Các chỉ số thiếu dữ liệu được bỏ qua khi tính điểm.</p>
         </>
-      ) : (
-        <p>Hãy sinh WBS trong tab Lập kế hoạch để xem báo cáo của dự án.</p>
       )}
     </section>
   );

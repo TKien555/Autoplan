@@ -1,3 +1,4 @@
+import { groups as criteria, practicalityWeight } from './criteria.mjs';
 import { referenceProjects } from './referenceProjects.mjs';
 
 const DAY_MS = 86_400_000;
@@ -27,8 +28,6 @@ export function findSimilarProjects(input) {
 }
 
 const isText = value => typeof value === 'string' && Boolean(value.trim());
-const hasTextList = value => Array.isArray(value) && value.length > 0 && value.every(isText);
-
 function dateMs(value) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
   const timestamp = Date.parse(value);
@@ -52,10 +51,80 @@ function expectedSprints(input) {
   }));
 }
 
-const measure = (id, label, passed, total, detail) => ({
-  id, label, passed, total, detail,
-  percent: total > 0 ? Math.round(passed * 100 / total) : 0,
-});
+function measure(id, label, passed, total, { target, lower = false, detail, display } = {}) {
+  const value = total > 0 ? passed * 100 / total : null;
+  return {
+    id, label, detail, target, lower,
+    display: value == null ? 'N/A' : display ?? `${Math.round(value)}% (${passed}/${total})`,
+    score: value == null || target == null ? null : lower ? 100 - value : value,
+    meetsTarget: value == null || target == null ? null : lower ? value <= target : value >= target,
+  };
+}
+
+function checkSchedule(tasks, sprints, actual) {
+  if (!tasks.length || !sprints.length || !Number.isFinite(sprints[0].firstDay) || !Array.isArray(actual)) return null;
+  const slots = new Map(sprints.map(sprint => [sprint.name, sprint]));
+  let invalid = actual.length !== sprints.length || sprints.some((sprint, index) => {
+    const slot = actual[index];
+    return slot?.name !== sprint.name || dateMs(slot.startDate) !== sprint.firstDay || dateMs(slot.endDate) !== sprint.lastDay;
+  });
+  const titles = new Map();
+  tasks.forEach((task, index) => {
+    const key = normalize(task.title);
+    if (!key || titles.has(key)) invalid = true;
+    titles.set(key, index);
+  });
+  const outgoing = tasks.map(() => []);
+  const incoming = tasks.map(() => 0);
+  const longest = tasks.map(task => Number(task.estimatedHours));
+  for (const [index, task] of tasks.entries()) {
+    const slot = slots.get(task.sprint);
+    const start = dateMs(task.startDate);
+    const end = dateMs(task.dueDate);
+    if (!slot || !(start >= slot.firstDay && end >= start && end <= slot.lastDay)) invalid = true;
+    if (!Number.isFinite(longest[index]) || longest[index] <= 0) invalid = true;
+    for (const title of new Set(task.dependencies || [])) {
+      const predecessor = titles.get(normalize(title));
+      if (predecessor === undefined) {
+        invalid = true;
+        continue;
+      }
+      if (!(dateMs(tasks[predecessor].dueDate) < start)) invalid = true;
+      outgoing[predecessor].push(index);
+      incoming[index]++;
+    }
+  }
+  const queue = incoming.flatMap((count, index) => count === 0 ? [index] : []);
+  let criticalHours = 0;
+  for (let position = 0; position < queue.length; position++) {
+    const index = queue[position];
+    criticalHours = Math.max(criticalHours, longest[index]);
+    for (const next of outgoing[index]) {
+      longest[next] = Math.max(longest[next], longest[index] + Number(tasks[next].estimatedHours));
+      if (--incoming[next] === 0) queue.push(next);
+    }
+  }
+  const workingHours = sprints.reduce((total, sprint) => total + capacity(sprint), 0);
+  return { valid: !invalid && queue.length === tasks.length && criticalHours <= workingHours,
+    criticalHours: queue.length === tasks.length && Number.isFinite(criticalHours) ? criticalHours : null, workingHours };
+}
+
+const capacity = sprint => Math.max(1, Math.round(((sprint.lastDay - sprint.firstDay) / DAY_MS + 1) * 5 / 7)) * 8;
+const reviewFields = ['title', 'description', 'role', 'assigneeId', 'priority', 'estimatedHours', 'sprint', 'startDate', 'dueDate', 'subtasks'];
+
+export function measureReview(original, edited) {
+  const byId = new Map(edited.map(task => [task._uid, task]));
+  let kept = 0;
+  let changed = 0;
+  let removed = 0;
+  for (const task of original) {
+    const updated = byId.get(task._uid);
+    if (!updated) removed++;
+    else if (reviewFields.some(field => JSON.stringify(task[field]) !== JSON.stringify(updated[field]))) changed++;
+    else kept++;
+  }
+  return { kept, changed, removed, total: original.length };
+}
 
 function taskMatches(task, terms) {
   const fields = [task.title, task.description, ...(Array.isArray(task.subtasks) ? task.subtasks : []),
@@ -65,83 +134,79 @@ function taskMatches(task, terms) {
   ));
 }
 
-export function evaluateWbs(response, input, { compareRag = false } = {}) {
-  const items = Array.isArray(response.tasks) ? response.tasks : [];
-  const tasks = items.filter(task => task && typeof task === 'object' && !Array.isArray(task));
-  const sprints = expectedSprints(input);
-  const actualSchedule = Array.isArray(response.sprintSchedule) ? response.sprintSchedule : [];
-  const sprintByName = new Map(sprints.map(sprint => [sprint.name, sprint]));
-  const datesInSprint = task => {
-    const sprint = sprintByName.get(task.sprint);
-    const start = dateMs(task.startDate);
-    const end = dateMs(task.dueDate);
-    return sprint && start >= sprint.firstDay && end >= start && end <= sprint.lastDay;
-  };
-  const scheduleMatches = actualSchedule.length === sprints.length && sprints.every((sprint, index) => {
-    const actual = actualSchedule[index];
-    return actual?.name === sprint.name && dateMs(actual.startDate) === sprint.firstDay
-      && dateMs(actual.endDate) === sprint.lastDay;
-  });
-
+export function evaluateWbs(response, input, { review, practicality } = {}) {
+  const tasks = (Array.isArray(response.tasks) ? response.tasks : []).filter(task => task && typeof task === 'object' && !Array.isArray(task));
+  const count = tasks.length;
   const metadata = response.evaluationMetadata || {};
-  const evidenceApplicable = (compareRag || input.useRag === true)
-    && (Number.isInteger(metadata.verifiedQuotes) || tasks.some(task => Array.isArray(task.evidence)));
-  const totalHours = tasks.reduce((total, task) => total + (Number.isFinite(task.estimatedHours) ? task.estimatedHours : 0), 0);
-  const names = new Map(tasks.map(task => [normalize(task.title), task]));
+  const sprints = expectedSprints(input);
+  const slots = new Map(sprints.map(sprint => [sprint.name, sprint]));
   const members = new Map((input.teamMembers || []).map(member => [member.id, member]));
-  const sprintCapacity = new Map(sprints.map(sprint => [sprint.name,
-    Math.max(1, Math.round(((sprint.lastDay - sprint.firstDay) / DAY_MS + 1) * 5 / 7)) * 8]));
-  const assignments = new Map();
+  const requirements = new Set((response.requirements || []).map(req => req.id));
+  const assigned = new Map();
   for (const task of tasks) {
-    if (!members.has(task.assigneeId) || !sprintByName.has(task.sprint) || !Number.isFinite(task.estimatedHours)) continue;
-    const key = JSON.stringify([task.assigneeId, task.sprint]);
-    assignments.set(key, {
-      hours: (assignments.get(key)?.hours || 0) + task.estimatedHours,
-      capacity: sprintCapacity.get(task.sprint),
-    });
+    if (!members.has(task.assigneeId) || !slots.has(task.sprint) || !(task.estimatedHours > 0)) continue;
+    const loads = assigned.get(task.assigneeId) || new Map();
+    loads.set(task.sprint, (loads.get(task.sprint) || 0) + task.estimatedHours);
+    assigned.set(task.assigneeId, loads);
   }
-
-  const dependencies = tasks.flatMap(task => (Array.isArray(task.dependencies) ? task.dependencies : []).map(title => {
-    const dependency = names.get(normalize(title));
-    return dependency && dependency !== task && dateMs(dependency.dueDate) < dateMs(task.startDate);
-  }));
-  const acTestable = task => Array.isArray(task.acceptanceCriteria) && task.acceptanceCriteria.some(criterion =>
+  let overloaded = 0;
+  const loads = [...assigned].map(([id, hours]) => {
+    let over = false;
+    const sprints = [...hours].map(([name, used]) => {
+      const limit = capacity(slots.get(name));
+      over ||= used > limit;
+      return `${name}: ${Math.round(used * 10) / 10}/${limit}h (${Math.round(used * 100 / limit)}%)`;
+    });
+    overloaded += Number(over);
+    const member = members.get(id);
+    return `${member.fullName || member.username || member.role} · ${sprints.join(' · ')}`;
+  });
+  const refs = tasks.map(task => (task.reqIds || []).filter(id => requirements.has(id)));
+  const covered = new Set(refs.flat());
+  const typeCount = ['integration', 'testing', 'bugfix'].filter(type => tasks.some(task => task.taskType === type)).length;
+  const schedule = checkSchedule(tasks, sprints, response.sprintSchedule);
+  const totalHours = tasks.reduce((total, task) => total + (Number.isFinite(task.estimatedHours) ? task.estimatedHours : 0), 0);
+  const acTestable = task => (task.acceptanceCriteria || []).some(criterion =>
     isText(criterion) && (/\bgiven\b.+\bwhen\b.+\bthen\b|\bkhi\b.+\bthi\b/i.test(normalize(criterion))
-      || /\d+(?:[.,]\d+)?\s*(?:%|ms\b|giây\b|phút\b|giờ\b|ngày\b|seconds?\b|minutes?\b)/i.test(criterion))
-  );
+      || /\d+(?:[.,]\d+)?\s*(?:%|ms\b|giây\b|phút\b|giờ\b|ngày\b|seconds?\b|minutes?\b)/i.test(criterion)));
   const groups = {
-    realism: [
-      measure('schedule', 'Khung lịch Sprint', Number(scheduleMatches), 1, 'Đối chiếu số Sprint, tên và ngày với cấu hình đầu vào.'),
-      measure('dates', 'Công việc nằm trong lịch đã giao', tasks.filter(datesInSprint).length, items.length, 'Ngày hợp lệ và nằm trong Sprint được giao.'),
-      measure('size', 'Công việc từ 4 đến 16 giờ', tasks.filter(task => task.estimatedHours >= 4 && task.estimatedHours <= 16).length, items.length, 'Kiểm tra kích thước công việc trên WBS.'),
+    completeness: [
+      measure('requirements', 'Độ phủ yêu cầu (REQ)', covered.size, requirements.size, {
+        target: 95, detail: covered.size < requirements.size
+          ? `Chưa có task: ${[...requirements].filter(id => !covered.has(id)).join(', ')}` : undefined,
+      }),
+      measure('acceptance-criteria', 'Tiêu chí nghiệm thu kiểm thử được', tasks.filter(acTestable).length, count, { target: 80 }),
+      measure('foundation', 'Task nền tảng', Number(typeCount === 3), tasks.some(task => Object.hasOwn(task, 'taskType')) ? 1 : 0, { target: 100,
+        display: typeCount === 3 ? 'Đạt · 3/3' : `Chưa đạt · ${typeCount}/3`, detail: 'Tích hợp, kiểm thử và sửa lỗi.' }),
+      measure('orphans', 'Task mồ côi', refs.filter(ids => !ids.length).length, requirements.size ? count : 0, { target: 10, lower: true }),
     ],
-    reliability: [
-      measure('structure', 'Cấu trúc WBS đầy đủ', tasks.filter(task =>
-        isText(task.title) && isText(task.description) && isText(task.role) && hasTextList(task.subtasks)
-        && ['High', 'Medium', 'Low'].includes(task.priority)
-        && Number.isFinite(task.estimatedHours) && task.estimatedHours >= 0.5 && task.estimatedHours <= 200
-      ).length, items.length || 1, 'Có tên, mô tả, vai trò, các bước, độ ưu tiên và ước lượng hợp lệ.'),
+    feasibility: [
+      measure('load', 'Tải theo người', overloaded, assigned.size, { target: 0, lower: true, display: `${overloaded}/${assigned.size} người quá tải` }),
+      measure('schedule', 'Lịch hợp lệ', Number(schedule?.valid), schedule ? 1 : 0, {
+        target: 100, display: schedule?.valid ? 'Đạt' : 'Chưa đạt',
+        detail: schedule?.criticalHours != null ? `Đường găng ${Math.round(schedule.criticalHours * 10) / 10}h / ${schedule.workingHours}h dự án.` : 'Kiểm tra vòng lặp, thứ tự phụ thuộc và đường găng.',
+      }),
+      measure('size', 'Task từ 4 đến 16 giờ', tasks.filter(task => task.estimatedHours >= 4 && task.estimatedHours <= 16).length, count, { target: 70 }),
+      measure('roles', 'Phân công đúng chuyên môn', tasks.filter(task => members.has(task.assigneeId)
+        && normalize(members.get(task.assigneeId).role) === normalize(task.role)).length, members.size ? count : 0, { target: 90 }),
     ],
-    coverage: [
-      measure('acceptance', 'Tiêu chí nghiệm thu kiểm thử được', tasks.filter(acTestable).length, items.length, 'Nhận diện Given/When/Then, Khi/Thì hoặc giá trị có đơn vị.'),
+    grounding: [
+      measure('sources', 'Task có nguồn', tasks.filter((task, index) => refs[index].length || task.sourceIds?.length).length,
+        requirements.size || response.ragMetadata?.usedRag || tasks.some(task => task.sourceIds?.length) ? count : 0, { target: 85 }),
+      measure('quotes', 'Trích dẫn đúng nguồn', metadata.verifiedQuotes ?? 0, metadata.proposedQuotes ?? 0, { target: 100 }),
+      measure('pert', 'Ước lượng truy được về PERT', tasks.filter(task => {
+        const { o, m, p } = task.pert || {};
+        return [o, m, p].every(Number.isFinite) && o > 0 && o <= m && m <= p
+          && Math.abs((o + 4 * m + p) / 6 - task.estimatedHours) <= 0.051;
+      }).length, tasks.some(task => Object.hasOwn(task, 'pert')) ? count : 0, { target: 90 }),
     ],
-    verifiability: [
-      measure('evidence', 'Công việc có trích dẫn đã đối chiếu', tasks.filter(task => Array.isArray(task.evidence) && task.evidence.length > 0).length,
-        evidenceApplicable ? items.length : 0, 'Máy chủ kiểm tra trích dẫn nguyên văn trong đoạn RAG. Người đọc vẫn cần đối chiếu ý nghĩa.'),
+    acceptance: [
+      measure('kept', 'Task giữ nguyên', review?.kept, review?.total, { target: 60 }),
+      measure('edited', 'Task đã sửa', review?.changed, review?.total),
+      measure('removed', 'Task đã xóa', review?.removed, review?.total),
+      measure('review', 'Task có cờ cần xem lại', review?.flagged, review?.flagged == null ? 0 : review.total, { target: 20, lower: true }),
     ],
   };
-  if (assignments.size) groups.realism.push(measure('capacity', 'Năng lực theo người và Sprint',
-    [...assignments.values()].filter(({ hours, capacity }) => hours <= capacity).length, assignments.size,
-    'So số giờ được giao với định mức theo thời lượng thực tế của từng Sprint.'));
-  if (members.size) groups.realism.push(measure('role', 'Phân công đúng vai trò', tasks.filter(task =>
-    members.has(task.assigneeId) && normalize(members.get(task.assigneeId).role) === normalize(task.role)
-  ).length, items.length, 'So vai trò đã khai báo với vai trò của người được giao.'));
-  if (dependencies.length) groups.realism.push(measure('dependencies', 'Thứ tự phụ thuộc',
-    dependencies.filter(Boolean).length, dependencies.length, 'Phụ thuộc phân giải theo tên và phải kết thúc trước ngày bắt đầu việc sau.'));
-  if (typeof metadata.directJson === 'boolean') groups.reliability.push(measure('json', 'JSON trực tiếp',
-    Number(metadata.directJson), 1, 'Phản hồi Gemini phân tích được dưới dạng JSON trực tiếp.'));
-  if (metadata.proposedQuotes > 0) groups.reliability.push(measure('quotes', 'Trích dẫn khớp nguyên văn',
-    metadata.verifiedQuotes, metadata.proposedQuotes, 'So nguyên văn với đoạn tài liệu được gắn mã.'));
 
   const similarProjects = findSimilarProjects(input).map(({ project, similarity }) => {
     const requirements = project.requirements.map(requirement => ({
@@ -160,19 +225,23 @@ export function evaluateWbs(response, input, { compareRag = false } = {}) {
 
   const matchedChunks = Array.isArray(response.ragMetadata?.matchedChunks) ? response.ragMetadata.matchedChunks : [];
   const sourceNames = [...new Set(matchedChunks.map(chunk => chunk?.docName).filter(isText))];
-  const groupScores = Object.fromEntries(Object.entries(groups).map(([key, criteria]) => {
-    const applicable = criteria.filter(criterion => criterion.total);
-    return [key, applicable.length
-      ? Math.round(applicable.reduce((sum, criterion) => sum + criterion.passed * 100 / criterion.total, 0) / applicable.length)
-      : null];
+  const groupScores = Object.fromEntries(Object.entries(groups).map(([key, metrics]) => {
+    const scored = metrics.flatMap(metric => metric.score == null ? [] : [metric.score]);
+    if (!scored.length) return [key, null];
+    let average = scored.reduce((sum, value) => sum + value, 0) / scored.length;
+    if (key === 'feasibility' && practicality >= 1 && practicality <= 5) {
+      average = average * (1 - practicalityWeight) + practicality / 5 * 100 * practicalityWeight;
+    }
+    return [key, Math.round(average)];
   }));
-  const weights = { realism: 35, reliability: 20, coverage: 30, verifiability: 15 };
   const rated = Object.entries(groupScores).filter(([, score]) => score !== null);
-  const score = items.length ? Math.round(rated.reduce((sum, [key, value]) => sum + value * weights[key], 0)
-    / rated.reduce((sum, [key]) => sum + weights[key], 0)) : 0;
-
+  const score = rated.length ? Math.round(rated.reduce((sum, [key, value]) => sum + value * criteria[key].weight, 0)
+    / rated.reduce((sum, [key]) => sum + criteria[key].weight, 0)) : null;
+  const weakMetrics = Object.entries(groups).flatMap(([group, metrics]) => group === 'acceptance' ? [] :
+    metrics.filter(metric => metric.meetsTarget === false).map(metric => `${criteria[group].label} · ${metric.label}: ${metric.display}${metric.detail ? ` · ${metric.detail}` : ''}`));
   return {
-    score, groups, groupScores, similarProjects, sourceNames, tasks, totalHours,
+    score, groups, groupScores, similarProjects, sourceNames, tasks, totalHours, weakMetrics, loads,
+    practicality: practicality ?? null,
     ragRetrieved: response.ragMetadata?.usedRag ?? null,
     telemetry: {
       model: metadata.model ?? null,

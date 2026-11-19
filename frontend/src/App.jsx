@@ -1,7 +1,34 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import './App.css';
 import EvaluationPanel from './EvaluationPanel.jsx';
-import { evaluateWbs } from '../../wbs_eval_suite/evaluateWbs.mjs';
+import { evaluateWbs, measureReview } from '../../wbs_eval_suite/evaluateWbs.mjs';
+
+function TaskEvidence({ task, requirements }) {
+  const ids = new Set(task.reqIds || []);
+  const linked = (requirements || []).filter(req => ids.has(req.id));
+  const evidence = task.evidence || [];
+  const badge = task.needsReview ? '🔴 Cần xem lại' : linked.length || evidence.length ? '🟢 Có nguồn' : '🟡 Suy luận';
+  return (
+    <div className="pu-task-evidence">
+      <strong>{badge}</strong>
+      {(linked.length > 0 || evidence.length > 0 || task.pert) && (
+        <details className="pu-eval-detail">
+          <summary>Căn cứ và ước lượng</summary>
+          <div className="pu-eval-detail-body">
+            {linked.map(req => <p key={req.id}><strong>{req.id}</strong> · {req.text}</p>)}
+            {evidence.map((item, index) => (
+              <blockquote key={index}>
+                <strong>{item.docName} · {item.chunkNumber ? `Đoạn ${item.chunkNumber}` : item.ref}</strong>
+                <p>“{item.quote}”</p>
+              </blockquote>
+            ))}
+            {task.pert && <p>PERT (O/M/P): {task.pert.o} / {task.pert.m} / {task.pert.p} giờ · dự tính ban đầu {Math.round((task.pert.o + 4 * task.pert.m + task.pert.p) / 6 * 10) / 10} giờ</p>}
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
 
 const API_BASE_URL = '/api';
 const DEFAULT_TRELLO_APP_KEY = import.meta.env?.VITE_TRELLO_API_KEY || '';
@@ -539,6 +566,38 @@ const App = () => {
     }, 125000);
   };
 
+  const requestJudge = async (input, responses) => {
+    const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
+    const result = await fetchJsonWithTimeout(`${API_BASE_URL}/evaluation/judge`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        taskName: input.taskName,
+        description: input.description,
+        candidates: responses.map(response => ({
+          model: response.evaluationMetadata?.model,
+          tasks: (response.tasks || []).filter((_, index, tasks) =>
+            index % Math.max(1, Math.ceil(tasks.length / 60)) === 0).map(task => ({
+            title: task.title,
+            description: task.description?.slice(0, 500),
+            acceptanceCriteria: task.acceptanceCriteria?.slice(0, 4),
+          })),
+        })),
+      }),
+    }, 30000);
+    return result.scores;
+  };
+
+  const handleReview = () => {
+    if (!currentEvaluation) return;
+    const { originalTasks, response, input } = currentEvaluation;
+    const review = measureReview(originalTasks, tasks);
+    if (originalTasks.some(task => typeof task.needsReview === 'boolean')) {
+      review.flagged = originalTasks.filter(task => task.needsReview).length;
+    }
+    setEvaluationRun({ ...currentEvaluation, reviewed: true, report: evaluateWbs(response, input, { review }) });
+  };
+
   const handleBreakdown = async () => {
     if (loading) return;
     setErrorBanner('');
@@ -582,9 +641,34 @@ const App = () => {
         sprintStartDate: sprintStartDate || getTodayIso(),
         sprintDurationDays
       };
-      const data = await requestBreakdown(input);
+      let data = await requestBreakdown(input);
 
       if (data.success) {
+        let report = evaluateWbs(data, input);
+        let refinement = '';
+        if (data.requirements && report.weakMetrics.length > 0) {
+          const feedback = report.weakMetrics;
+          const previousWbs = JSON.stringify(data.tasks.map(task => ({
+            title: task.title, description: task.description?.slice(0, 200), reqIds: task.reqIds, taskType: task.taskType, sprint: task.sprint,
+            dependencies: task.dependencies, pert: task.pert, acceptanceCriteria: task.acceptanceCriteria,
+          })));
+          try {
+            const candidate = await requestBreakdown({ ...input, refinementFeedback: feedback, previousWbs: previousWbs.slice(0, 18000) });
+            if (candidate.success) {
+              const refined = evaluateWbs(candidate, input);
+              if (refined.tasks.length && refined.weakMetrics.length <= report.weakMetrics.length
+                && (refined.score ?? 0) >= (report.score ?? 0) &&
+                (refined.weakMetrics.length < report.weakMetrics.length || refined.score > report.score)) {
+                data = candidate;
+                report = refined;
+                refinement = 'Đã áp dụng một lượt chỉnh sửa theo cổng chất lượng.';
+              }
+            }
+          } catch {
+            // Preserve the first result if the optional refinement fails.
+          }
+          refinement ||= 'Đã thử chỉnh sửa một lượt. Báo cáo đang dùng kết quả ban đầu.';
+        }
         const enriched = (data.tasks || []).map((t, i) => ({
           ...t,
           _uid: `task_${Date.now()}_${i}`,
@@ -594,7 +678,7 @@ const App = () => {
           startDate: t.startDate || sprintStartDate || getTodayIso(),
           dueDate: t.dueDate || addDaysIso(sprintStartDate, 2)
         }));
-        setEvaluationRun({ input, boardId, report: evaluateWbs(data, input) });
+        setEvaluationRun({ input, boardId, response: data, report, originalTasks: enriched, refinement });
         setTasks(enriched);
         setIdentifiedFeatures(Array.isArray(data.identifiedFeatures) ? data.identifiedFeatures : []);
         setTeamRecommendation(Array.isArray(data.teamRecommendation) ? data.teamRecommendation : []);
@@ -1009,6 +1093,10 @@ const App = () => {
         >
           📊 Đánh giá
         </button>
+        <button type="button" className={`pu-tab-btn ${activeTab === 'comparison' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('comparison'); setErrorBanner(''); }}>
+          So sánh RAG
+        </button>
         <button
           type="button"
           onClick={() => applyTheme(theme === 'dark' ? 'light' : 'dark')}
@@ -1205,7 +1293,7 @@ const App = () => {
           {latestEvaluation && (
             <button type="button" className="pu-tab-btn"
               onClick={() => setActiveTab('evaluation')}>
-              Xem đánh giá WBS vừa sinh · {latestEvaluation.score}/100
+              Xem đánh giá WBS vừa sinh · {latestEvaluation.score == null ? 'N/A' : `${latestEvaluation.score}/100`}
             </button>
           )}
 
@@ -1391,6 +1479,7 @@ const App = () => {
                                 </button>
                               </div>
 
+                              <TaskEvidence task={task} requirements={currentEvaluation?.response.requirements} />
                               {/* Dòng 2: Mô tả chi tiết */}
                               <textarea
                                 rows={2}
@@ -1709,9 +1798,12 @@ const App = () => {
       )}
 
       <EvaluationPanel
-        active={activeTab === 'evaluation'}
+        active={activeTab === 'evaluation' || activeTab === 'comparison'}
+        mode={activeTab === 'comparison' ? 'comparison' : 'report'}
         latest={latestEvaluation}
         requestBreakdown={requestBreakdown}
+        requestJudge={requestJudge}
+        onReview={handleReview}
         onResize={resizeTrelloIframe}
         isGenerating={loading}
         run={currentEvaluation}

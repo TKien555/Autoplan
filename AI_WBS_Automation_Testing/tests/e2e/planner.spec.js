@@ -38,7 +38,7 @@ test('E2E-01: mở ứng dụng và hiển thị form lập kế hoạch', async
 test('E2E-02: điều hướng giữa Planner, Team và RAG', async ({ page }) => {
   await page.getByRole('button', { name: /Vai trò nhóm/ }).click();
   await expect(page.getByText(/Phân vai trò thành viên trong Board/i)).toBeVisible();
-  await page.getByRole('button', { name: /RAG/ }).click();
+  await page.getByRole('button', { name: /RAG \(/ }).click();
   await expect(page.getByRole('button', { name: /Nhập văn bản trực tiếp/ })).toBeVisible();
   await page.getByRole('button', { name: /Lập kế hoạch Đa Sprint/ }).click();
   await expect(page.getByPlaceholder('Nhập tên công việc hoặc dự án lớn...')).toBeVisible();
@@ -68,7 +68,7 @@ test('E2E-05: sinh WBS và hiển thị Task khi API trả kết quả hợp l�
 });
 
 test('E2E-06: hiển thị cảnh báo khi nạp tài liệu RAG không có nội dung', async ({ page }) => {
-  await page.getByRole('button', { name: /RAG/ }).click();
+  await page.getByRole('button', { name: /RAG \(/ }).click();
   await page.getByRole('button', { name: /Nhập văn bản trực tiếp/ }).click();
   await page.getByRole('button', { name: /Nạp vào Bộ nhớ Tri thức/ }).click();
   await expect(page.locator('.pu-error-banner')).toContainText(/Vui lòng nhập nội dung tài liệu chuyên môn/i);

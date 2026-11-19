@@ -983,3 +983,28 @@
   color: var(--text-secondary);
   font-size: 12px;
 }
+
+.pu-eval-score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  margin-block: 10px;
+}
+
+.pu-eval-score-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+.pu-eval-score-grid span {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.pu-task-evidence {
+  margin-block: 6px;
+  font-size: 12px;
+}
