@@ -26,6 +26,12 @@ Nhập tiêu đề, mô tả các nhóm người dùng và luồng nghiệp vụ
 
 Sau khi sinh WBS, mở **Lịch Gantt** để xem và lọc công việc theo ngày hoặc **Khối lượng theo Sprint** để đối chiếu số giờ của từng người với định mức của Sprint. Bấm một ô giờ để xem các công việc liên quan. Các công việc chưa phân công được hiển thị riêng. Mục **Đầu ra và nghiệm thu** của mỗi công việc cho biết sản phẩm bàn giao, tiêu chí nghiệm thu và tình huống cần xử lý nếu AI cung cấp.
 
+## Phân rã theo loại bài toán
+
+Backend chọn hướng phân rã từ tiêu đề và mô tả dự án. Các hướng từ `work2` bao gồm đặt chỗ thời gian thực, thanh toán và thuê bao, mở rộng hệ thống đang chạy, di chuyển dữ liệu, hiệu năng và chi phí, bảo mật và tuân thủ, AI/RAG và khắc phục sự cố. Ví dụ, với đặt chỗ, WBS xét vòng đời giữ chỗ và tình huống hai người đặt cùng lúc. Với migration, WBS xét đối soát dữ liệu và khả năng quay lại hệ thống cũ. Một dự án có thể kết hợp nhiều hướng.
+
+Mỗi đầu việc tập trung vào một kết quả nghiệp vụ có thể nghiệm thu. Công việc quản trị vẫn được lập kế hoạch nếu có trong phạm vi. Khi tiêu đề công việc còn chung chung và thiếu đầu ra hoặc cách kiểm chứng, phản hồi này được gửi vào cùng lượt chỉnh sửa chất lượng. Luồng không phát sinh lượt AI riêng để phân loại bài toán và không thêm tiêu chí vào điểm đánh giá.
+
 ## Đánh giá WBS
 
 Sau khi sinh WBS trong Trello, mở **Xem đánh giá WBS vừa sinh**. Báo cáo có bốn nhóm với trọng số Khả thi 35%, Đầy đủ 30%, Có căn cứ 20%, Chấp nhận 15%. Chỉ số thiếu dữ liệu là N/A và điểm được chia lại theo các nhóm có dữ liệu. Tỷ lệ sửa và xóa là thông tin theo dõi. Nhóm Chấp nhận được tính khi bấm **Xác nhận đã duyệt WBS** và so với bản sinh ban đầu. Task bổ sung thủ công nằm ngoài mẫu số.

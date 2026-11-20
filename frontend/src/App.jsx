@@ -589,8 +589,9 @@ const App = () => {
       if (data.success) {
         let report = evaluateWbs(data, input);
         let refinement = '';
-        if (data.requirements && report.weakMetrics.length > 0) {
-          const feedback = report.weakMetrics;
+        const planningFeedback = data.planningFeedback || [];
+        const feedback = [...planningFeedback, ...report.weakMetrics];
+        if (data.requirements && feedback.length > 0) {
           const previousWbs = JSON.stringify(data.tasks.map(task => ({
             title: task.title, description: task.description?.slice(0, 200), reqIds: task.reqIds, taskType: task.taskType, sprint: task.sprint, deliverables: task.deliverables, edgeCases: task.edgeCases,
             dependencies: task.dependencies, pert: task.pert, acceptanceCriteria: task.acceptanceCriteria,
@@ -599,9 +600,12 @@ const App = () => {
             const candidate = await requestBreakdown({ ...input, refinementFeedback: feedback, previousWbs: previousWbs.slice(0, 18000) });
             if (candidate.success) {
               const refined = evaluateWbs(candidate, input);
-              if (refined.tasks.length && refined.weakMetrics.length <= report.weakMetrics.length
-                && (refined.score ?? 0) >= (report.score ?? 0) &&
-                (refined.weakMetrics.length < report.weakMetrics.length || refined.score > report.score)) {
+              const candidatePlanningIssues = (candidate.planningFeedback || []).length;
+              const totalIssues = refined.weakMetrics.length + candidatePlanningIssues;
+              if (refined.tasks.length && totalIssues <= feedback.length
+                && candidatePlanningIssues <= planningFeedback.length
+                && (refined.score ?? 0) >= (report.score ?? 0)
+                && (totalIssues < feedback.length || refined.score > report.score)) {
                 data = candidate;
                 report = refined;
                 refinement = 'Đã áp dụng một lượt chỉnh sửa theo cổng chất lượng.';

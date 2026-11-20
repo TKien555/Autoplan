@@ -125,6 +125,7 @@ describe('AI WBS & RAG Planner - React component tests', () => {
       return { ok: true, json: async () => ({
         success: true,
         requirements: [{ id: 'REQ-01', text: 'Giữ tồn kho khi đặt hàng.' }],
+        planningFeedback: input.refinementFeedback ? [] : ['Công việc «Viết CRUD tồn kho» còn chung chung.'],
         tasks: types.map(taskType => ({
           title: `Kiểm tra tồn kho · ${taskType}`, taskType, description: 'Giữ hàng', reqIds: ['REQ-01'],
           role: 'QA', priority: 'High', estimatedHours: 8, sprint: 'Sprint 1', startDate: input.sprintStartDate,
@@ -138,6 +139,7 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     await waitFor(() => expect(screen.getAllByText('🟢 Có nguồn')).toHaveLength(3));
     expect(breakdowns).toHaveLength(2);
     expect(breakdowns[1].refinementFeedback.join(' ')).toContain('Tích hợp, kiểm thử và sửa lỗi');
+    expect(breakdowns[1].refinementFeedback).toContain('Công việc «Viết CRUD tồn kho» còn chung chung.');
     await user.click(screen.getAllByText('Căn cứ và ước lượng')[0]);
     expect(screen.getAllByText(/Giữ tồn kho khi đặt hàng/)[0]).toBeVisible();
     await user.click(screen.getByRole('button', { name: /Xem đánh giá WBS vừa sinh/ }));
