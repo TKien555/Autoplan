@@ -114,6 +114,30 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     expect(screen.queryByText('Duyệt giao diện · 8h')).not.toBeInTheDocument();
   });
 
+  it('gửi loại dự án đã chọn hoặc tên loại tùy chỉnh tới backend', async () => {
+    const user = userEvent.setup();
+    const sent = [];
+    vi.stubGlobal('fetch', vi.fn(async (url, options) => {
+      if (url.endsWith('/breakdown')) sent.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({ success: true, documents: [], tasks: [] }) };
+    }));
+    render(<App />);
+    const projectType = screen.getByRole('combobox', { name: 'Loại dự án' });
+    expect(projectType).toHaveValue('');
+    await user.selectOptions(projectType, 'Bảo trì / sửa lỗi');
+    await user.click(screen.getByRole('button', { name: /Tự động phân rã/ }));
+    expect(sent[0]).toMatchObject({ projectType: 'Bảo trì / sửa lỗi' });
+    expect(sent[0]).not.toHaveProperty('productType');
+
+    await user.selectOptions(projectType, 'custom');
+    await user.click(screen.getByRole('button', { name: /Tự động phân rã/ }));
+    expect(screen.getByText(/Nhập tên loại dự án hoặc chọn Tự nhận diện từ mô tả/)).toBeInTheDocument();
+    expect(sent).toHaveLength(1);
+    await user.type(screen.getByLabelText('Tên loại dự án'), 'Bảo trì và nâng cấp');
+    await user.click(screen.getByRole('button', { name: /Tự động phân rã/ }));
+    expect(sent[1]).toMatchObject({ projectType: 'Bảo trì và nâng cấp' });
+  });
+
   it('refines once, shows the task source and counts acceptance only after review', async () => {
     const user = userEvent.setup();
     const breakdowns = [];

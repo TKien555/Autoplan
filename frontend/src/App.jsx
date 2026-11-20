@@ -36,6 +36,17 @@ const API_BASE_URL = '/api';
 const DEFAULT_TRELLO_APP_KEY = import.meta.env?.VITE_TRELLO_API_KEY || '';
 const DEFAULT_APP_NAME = import.meta.env?.VITE_APP_NAME || 'AI WBS & RAG Planner';
 
+const PROJECT_TYPES = [
+  'Xây dựng website / ứng dụng',
+  'Nâng cấp / mở rộng hệ thống',
+  'Bảo trì / sửa lỗi',
+  'Vận hành hệ thống',
+  'Di chuyển dữ liệu / hạ tầng',
+  'Tích hợp hệ thống',
+  'Phân tích dữ liệu / báo cáo',
+  'Nghiên cứu / thử nghiệm',
+];
+
 const SUGGESTED_ROLES = [
   'Full-stack Developer',
   'Backend Developer',
@@ -143,7 +154,8 @@ const App = () => {
   const [projectDurationWeeks, setProjectDurationWeeks] = useState(12);
   const [sprintDurationWeeks, setSprintDurationWeeks] = useState(2);
   const [methodology, setMethodology] = useState('Scrum');
-  const [productType, setProductType] = useState('');
+  const [projectType, setProjectType] = useState('');
+  const [customProjectType, setCustomProjectType] = useState('');
   const [technologyStack, setTechnologyStack] = useState('');
   const [deploymentTarget, setDeploymentTarget] = useState('');
   const [recommendTeam, setRecommendTeam] = useState(true);
@@ -552,6 +564,11 @@ const App = () => {
       return setErrorBanner('Nhập số tuần dự án và số tuần mỗi Sprint là số nguyên dương, trong phạm vi lịch hỗ trợ.');
     }
 
+    const selectedProjectType = projectType === 'custom' ? customProjectType.trim() : projectType;
+    if (projectType === 'custom' && !selectedProjectType) {
+      return setErrorBanner('Nhập tên loại dự án hoặc chọn Tự nhận diện từ mô tả.');
+    }
+
     setLoading(true);
     setPushSuccessMsg('');
     setFailedCards([]);
@@ -572,7 +589,7 @@ const App = () => {
         roles: rolesSummary,
         teamMembers: teamMembersPayload,
         methodology,
-        productType: productType.trim(),
+        projectType: selectedProjectType,
         technologyStack: technologyStack.trim(),
         deploymentTarget: deploymentTarget.trim(),
         recommendTeam,
@@ -1101,9 +1118,19 @@ const App = () => {
             <label className="pu-form-group">Phương pháp
               <input className="pu-input" value={methodology} onChange={e => setMethodology(e.target.value)} placeholder="Scrum" maxLength={50} />
             </label>
-            <label className="pu-form-group">Loại sản phẩm
-              <input className="pu-input" value={productType} onChange={e => setProductType(e.target.value)} placeholder="Web Application" maxLength={100} />
+            <label className="pu-form-group">Loại dự án
+              <select className="pu-select" value={projectType} onChange={e => setProjectType(e.target.value)}>
+                <option value="">Tự nhận diện từ mô tả</option>
+                {PROJECT_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                <option value="custom">Khác</option>
+              </select>
             </label>
+            {projectType === 'custom' && (
+              <label className="pu-form-group">Tên loại dự án
+                <input className="pu-input" value={customProjectType} onChange={e => setCustomProjectType(e.target.value)}
+                  placeholder="VD: Bảo trì và nâng cấp" maxLength={100} />
+              </label>
+            )}
             <label className="pu-form-group">Công nghệ
               <input className="pu-input" value={technologyStack} onChange={e => setTechnologyStack(e.target.value)} placeholder="ReactJS, Node.js, ExpressJS, PostgreSQL" maxLength={300} />
             </label>
