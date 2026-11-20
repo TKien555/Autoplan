@@ -19,6 +19,7 @@ import {
 import userEvent from '@testing-library/user-event';
 
 import App from '../../../frontend/src/App.jsx';
+import PlanningCharts from '../../../frontend/src/PlanningCharts.jsx';
 import { mockFetch } from '../fixtures/mock-api.js';
 
 // =====================================================
@@ -94,6 +95,23 @@ describe('AI WBS & RAG Planner - React component tests', () => {
     const last = screen.getByText('Sprint 8:').parentElement.textContent;
     const dates = last.match(/\d{4}-\d{2}-\d{2}/g);
     expect((Date.parse(dates[1]) - Date.parse(dates[0])) / 86400000 + 1).toBe(7);
+  });
+
+  it('tính đúng định mức Sprint cuối và phân biệt người trùng tên', async () => {
+    const user = userEvent.setup();
+    render(<PlanningCharts mode="workload" onResize={() => {}}
+      tasks={[
+        { _uid: 'a', title: 'Kiểm thử thanh toán', assigneeId: 'first', sprint: 'Sprint 8', estimatedHours: 42 },
+        { _uid: 'b', title: 'Duyệt giao diện', assigneeId: 'second', sprint: 'Sprint 8', estimatedHours: 8 },
+      ]}
+      sprintSchedule={[{ name: 'Sprint 8', startDate: '2027-04-12', endDate: '2027-04-18' }]}
+      boardMembers={[{ id: 'first', fullName: 'Minh' }, { id: 'second', fullName: 'Minh' }]} />);
+    const overloaded = screen.getByRole('button', { name: 'Minh, Sprint 8: 42 giờ trên 40 giờ' });
+    expect(overloaded.closest('td')).toHaveClass('over');
+    expect(screen.getByRole('button', { name: 'Minh, Sprint 8: 8 giờ trên 40 giờ' }).closest('td')).not.toHaveClass('over');
+    await user.click(overloaded);
+    expect(screen.getByText('Kiểm thử thanh toán · 42h')).toBeVisible();
+    expect(screen.queryByText('Duyệt giao diện · 8h')).not.toBeInTheDocument();
   });
 
   it('refines once, shows the task source and counts acceptance only after review', async () => {

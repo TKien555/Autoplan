@@ -15,7 +15,7 @@ npm start --prefix backend
 
 Trước khi build, đặt `VITE_TRELLO_API_KEY` trong `frontend/.env` nếu dùng OAuth Trello. Trong `backend/.env`, đặt `GEMINI_API_KEY`, `POWERUP_ID`, `TRELLO_JWT_KEY_1` (public key RSA PEM) và giữ `DEV_ALLOW_UNVERIFIED_JWT=false`. Nếu chạy qua reverse proxy, dùng `TRUST_PROXY` khớp số lớp proxy. Có thể dùng `SQLITE_PATH` để chọn tệp SQLite trên ổ lưu trữ bền vững. Nếu không cấu hình, backend dùng `backend/knowledge_base.db`; bản cài mới sẽ tạo cơ sở dữ liệu riêng.
 
-Trỏ ngrok hoặc reverse proxy HTTPS tới ứng dụng chạy ở cổng 3001. Trong cổng quản trị Trello Power-Up, đặt iframe connector là `https://<origin>/connector.html`, bật **Card Buttons** và **Card Back Section**, rồi cài Power-Up vào board. Mở một thẻ và bấm **Lập kế hoạch AI**. Có thể kiểm tra giao diện tại `/?view=app` và trạng thái backend tại `/api/health`.
+Trỏ ngrok hoặc reverse proxy HTTPS tới ứng dụng chạy ở cổng 3001. Trong cổng quản trị Trello Power-Up, đặt iframe connector là `https://<origin>/connector.html`, bật **Card Buttons** và **Card Back Section**, rồi cài Power-Up vào board. Mở một thẻ và bấm **Lập kế hoạch AI**. Mở `/` trên trình duyệt để xem Planner. URL `/?view=app` vẫn mở được Planner trong iframe, còn `/api/health` dùng để kiểm tra backend.
 
 Khi phát triển, chạy `npm run dev --prefix frontend` cùng backend. Vite chuyển tiếp `/api` đến cổng 3001. Nếu backend nằm ngoài checkout, đặt `FRONTEND_DIST` thành đường dẫn tuyệt đối tới `frontend/dist` để phục vụ bản build.
 
@@ -23,6 +23,8 @@ Khi phát triển, chạy `npm run dev --prefix frontend` cùng backend. Vite ch
 ## Lập kế hoạch theo thời lượng
 
 Nhập tiêu đề, mô tả các nhóm người dùng và luồng nghiệp vụ, phương pháp, loại sản phẩm, công nghệ và môi trường triển khai. Chọn tổng số tuần và số tuần mỗi Sprint. Ví dụ với website bán hàng dùng Scrum, ReactJS, Node.js, ExpressJS, PostgreSQL và Cloud Server, 12 tuần với nhịp 2 tuần tạo 6 Sprint. Dự án 15 tuần với nhịp 2 tuần tạo 8 Sprint, trong đó Sprint cuối dài 1 tuần. Bật tùy chọn đề xuất nhân sự để xem số người và lý do theo vai trò.
+
+Sau khi sinh WBS, mở **Lịch Gantt** để xem và lọc công việc theo ngày hoặc **Khối lượng theo Sprint** để đối chiếu số giờ của từng người với định mức của Sprint. Bấm một ô giờ để xem các công việc liên quan. Các công việc chưa phân công được hiển thị riêng. Mục **Đầu ra và nghiệm thu** của mỗi công việc cho biết sản phẩm bàn giao, tiêu chí nghiệm thu và tình huống cần xử lý nếu AI cung cấp.
 
 ## Đánh giá WBS
 

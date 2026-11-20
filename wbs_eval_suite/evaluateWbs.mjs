@@ -119,7 +119,10 @@ function checkSchedule(tasks, sprints, actual) {
   };
 }
 
-const capacity = sprint => Math.max(1, Math.round(((sprint.lastDay - sprint.firstDay) / DAY_MS + 1) * 5 / 7)) * 8;
+export const sprintCapacityHours = days => Number.isFinite(days) && days > 0
+  ? Math.max(1, Math.round(days * 5 / 7)) * 8
+  : null;
+const capacity = sprint => sprintCapacityHours((sprint.lastDay - sprint.firstDay) / DAY_MS + 1);
 const reviewFields = ['title', 'description', 'role', 'assigneeId', 'priority', 'estimatedHours', 'sprint', 'startDate', 'dueDate', 'subtasks'];
 
 export function measureReview(original, edited) {

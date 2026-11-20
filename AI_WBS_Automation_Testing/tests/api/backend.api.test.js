@@ -1,4 +1,4 @@
-import test, { before, after } from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 
 const BASE_URL = (process.env.API_BASE_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
@@ -9,19 +9,9 @@ const AUTH_TOKEN = process.env.TEST_AUTH_TOKEN || Buffer.from(JSON.stringify({
   memberId: 'automation-test-member'
 })).toString('base64');
 const authHeaders = { Authorization: `Bearer ${AUTH_TOKEN}` };
-let backendAvailable = false;
-
-before(async () => {
-  try {
-    const response = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) });
-    backendAvailable = response.ok;
-  } catch {
-    backendAvailable = false;
-  }
-  if (!backendAvailable) console.warn(`\n[API TEST] Không kết nối được ${BASE_URL}. Hãy khởi động backend trước.\n`);
-});
-
-after(() => {});
+const backendAvailable = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(3000) })
+  .then(response => response.ok, () => false);
+if (!backendAvailable) console.warn(`[API TEST] Không kết nối được ${BASE_URL}. Hãy khởi động backend trước.`);
 
 const apiTest = (name, fn) => test(name, { skip: !backendAvailable }, fn);
 

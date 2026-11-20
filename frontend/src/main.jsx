@@ -1,7 +1,8 @@
 const urlParams = new URLSearchParams(window.location.search);
-const isAppView = urlParams.get('view') === 'app';
+const isConnector = location.pathname.endsWith('/connector.html')
+  || (window.parent !== window && urlParams.get('view') !== 'app');
 
-if (isAppView) {
+if (!isConnector) {
   void import('./planner.jsx');
 } else if (window.TrelloPowerUp) {
   const appKey = import.meta.env.VITE_TRELLO_API_KEY;

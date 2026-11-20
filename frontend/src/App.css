@@ -388,100 +388,6 @@
 }
 
 /* ==========================================================================
-   6. THANH CÂN BẰNG TẢI NHÂN SỰ (WORKLOAD CAPACITY BAR)
-   ========================================================================== */
-.pu-workload-box {
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-}
-
-.pu-workload-header {
-  font-size: 12px;
-  margin-bottom: 8px;
-  color: var(--text-primary);
-}
-
-.pu-workload-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.pu-workload-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.pu-workload-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px;
-  font-size: 11.5px;
-}
-
-.pu-muted-inline {
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-.pu-workload-badge {
-  font-size: 10.5px;
-  font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 10px;
-}
-
-.pu-workload-badge.normal {
-  background-color: var(--success-bg);
-  color: var(--success-text);
-  border: 1px solid var(--success-border);
-}
-
-.pu-workload-badge.warning {
-  background-color: var(--warning-bg);
-  color: var(--warning-text);
-  border: 1px solid var(--warning-border);
-}
-
-.pu-workload-badge.overloaded {
-  background-color: var(--danger-bg);
-  color: var(--danger-hover);
-  border: 1px solid var(--danger-border);
-}
-
-.pu-workload-track {
-  width: 100%;
-  height: 6px;
-  background-color: var(--bg-input);
-  border-radius: 4px;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-}
-
-.pu-workload-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.25s ease;
-}
-
-.pu-workload-fill.normal {
-  background-color: var(--success);
-}
-
-.pu-workload-fill.warning {
-  background-color: var(--warning);
-}
-
-.pu-workload-fill.overloaded {
-  background-color: var(--danger);
-}
-
-/* ==========================================================================
    7. DANH SÁCH WBS THEO SPRINT & THẺ TASK (GỌN GÀNG, KHOA HỌC)
    ========================================================================== */
 .pu-result-header {
@@ -1007,4 +913,107 @@
 .pu-task-evidence {
   margin-block: 6px;
   font-size: 12px;
+}
+
+.pu-planning-charts {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 10px;
+}
+
+.pu-planning-charts .pu-tab-btn[aria-pressed="true"] {
+  background: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  border-color: var(--accent-primary);
+}
+
+.pu-chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: end;
+  margin-block: 8px;
+}
+
+.pu-chart-controls label {
+  flex: 1 0 135px;
+}
+
+.pu-chart-scroll {
+  overflow: auto;
+  max-height: 420px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  margin-block: 8px;
+}
+
+.pu-gantt-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 1fr) minmax(18rem, 3fr);
+  min-width: 30rem;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+}
+
+.pu-gantt-row + .pu-gantt-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pu-gantt-axis {
+  display: flex;
+  justify-content: space-between;
+}
+
+.pu-gantt-track {
+  position: relative;
+  min-height: 25px;
+}
+
+.pu-gantt-bar {
+  position: absolute;
+  inset-block-start: 2px;
+  height: 6px;
+  min-width: 2px;
+  background: var(--accent-primary);
+  border-radius: var(--radius-sm);
+}
+
+.pu-gantt-dates {
+  position: relative;
+  top: 8px;
+  font-size: 11px;
+}
+
+.pu-chart-muted {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.pu-load-grid table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.pu-load-grid :is(th, td) {
+  padding: 6px 8px;
+  white-space: nowrap;
+  border: 1px solid var(--border-subtle);
+}
+
+.pu-load-grid th:first-child {
+  position: sticky;
+  left: 0;
+  text-align: left;
+  background: var(--bg-surface);
+}
+
+.pu-load-grid td.high {
+  background: var(--warning-bg);
+}
+
+.pu-load-grid td.over {
+  background: var(--danger-bg);
 }

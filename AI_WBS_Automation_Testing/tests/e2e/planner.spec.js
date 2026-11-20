@@ -8,6 +8,9 @@ const mockTasksResponse = {
     role: 'Backend Developer',
     priority: 'High',
     subtasks: ['Thiết kế endpoint', 'Viết unit test'],
+    deliverables: 'Tài liệu API đăng nhập',
+    acceptanceCriteria: ['Thông báo lỗi khi mật khẩu không đúng'],
+    edgeCases: ['Mật khẩu hết hạn'],
     assignee: '',
     estimatedHours: 8,
     sprint: 'Sprint 1',
@@ -18,6 +21,7 @@ const mockTasksResponse = {
 };
 
 test.beforeEach(async ({ page }) => {
+  await page.route('https://p.trellocdn.com/**', route => route.abort());
   await page.route('**/api/documents', async route => {
     if (route.request().method() === 'GET') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, documents: [] }) });
@@ -53,7 +57,8 @@ test('E2E-03: tính số Sprint từ thời lượng dự án và hỗ trợ hơ
 test('E2E-04: không cho tạo kế hoạch khi tên dự án ngắn hơn 3 ký tự', async ({ page }) => {
   const name = page.getByPlaceholder('Nhập tên công việc hoặc dự án lớn...');
   await name.fill('AB');
-  await expect(page.getByRole('button', { name: /Tự động phân rã|Chia lại Task/ })).toBeDisabled();
+  await page.getByRole('button', { name: /Tự động phân rã|Chia lại Task/ }).click();
+  await expect(page.locator('.pu-error-banner')).toContainText('ít nhất 3 ký tự');
 });
 
 test('E2E-05: sinh WBS và hiển thị Task khi API trả kết quả hợp lệ', async ({ page }) => {
@@ -63,8 +68,19 @@ test('E2E-05: sinh WBS và hiển thị Task khi API trả kết quả hợp l�
   await page.getByPlaceholder('Nhập tên công việc hoặc dự án lớn...').fill('Xây dựng hệ thống quản lý đơn hàng');
   await page.getByPlaceholder('Nhập chi tiết yêu cầu nghiệp vụ, phạm vi chức năng...').fill('Quản lý đơn hàng, thanh toán và theo dõi trạng thái.');
   await page.getByRole('button', { name: /Tự động phân rã|Chia lại Task/ }).click();
-  await expect(page.getByText('Thiết kế API đăng nhập')).toBeVisible();
-  await expect(page.getByText(/Sprint 1/).first()).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Tên công việc', exact: true })).toHaveValue('Thiết kế API đăng nhập');
+  await page.getByText('Đầu ra và nghiệm thu', { exact: true }).click();
+  await expect(page.getByText('Tài liệu API đăng nhập', { exact: false })).toBeVisible();
+  await expect(page.getByText('Mật khẩu hết hạn')).toBeVisible();
+  await page.getByRole('button', { name: 'Lịch Gantt' }).click();
+  const chart = page.getByRole('region', { name: 'Lịch Gantt' });
+  await expect(chart.getByText('Thiết kế API đăng nhập')).toBeVisible();
+  await chart.getByLabel('Tìm công việc').fill('không trùng');
+  await expect(chart.getByText('Không có công việc khớp bộ lọc.')).toBeVisible();
+  await page.getByRole('button', { name: 'Khối lượng theo Sprint' }).click();
+  const workload = page.getByRole('region', { name: 'Khối lượng theo Sprint' });
+  await workload.getByRole('button', { name: 'Chưa phân công, Sprint 1: 8 giờ' }).click();
+  await expect(workload.getByText('Thiết kế API đăng nhập · 8h')).toBeVisible();
 });
 
 test('E2E-06: hiển thị cảnh báo khi nạp tài liệu RAG không có nội dung', async ({ page }) => {
@@ -77,7 +93,25 @@ test('E2E-06: hiển thị cảnh báo khi nạp tài liệu RAG không có nộ
 test('E2E-07: chuyển đổi giao diện sáng/tối', async ({ page }) => {
   const themeButton = page.locator('.pu-theme-toggle-btn');
   await themeButton.click();
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await themeButton.click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await themeButton.click();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+});
+
+test('Connector Trello đăng ký Power-Up và mở đúng Planner', async ({ page }) => {
+  const sdk = 'https://p.trellocdn.com/**';
+  await page.unroute(sdk);
+  await page.route(sdk, route => route.fulfill({
+    contentType: 'application/javascript',
+    body: 'window.TrelloPowerUp = { initialize(options) { window.powerUpOptions = options; } };'
+  }));
+  await page.goto('/connector.html');
+  const registered = await page.evaluate(() => {
+    const options = window.powerUpOptions;
+    if (!options) return null;
+    const [button] = options['card-buttons']();
+    return button.callback({ popup: config => config.url });
+  });
+  expect(registered).toBe('./?view=app');
+  await expect(page.locator('#powerup-content')).toHaveCount(0);
 });

@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, lazy, Suspense } from 'react';
 import './App.css';
 import EvaluationPanel from './EvaluationPanel.jsx';
 import { evaluateWbs, measureReview } from '../../wbs_eval_suite/evaluateWbs.mjs';
+
+const PlanningCharts = lazy(() => import('./PlanningCharts.jsx'));
 
 function TaskEvidence({ task, requirements }) {
   const ids = new Set(task.reqIds || []);
@@ -156,6 +158,7 @@ const App = () => {
 
   // State kết quả WBS & Kéo thả (Drag & Drop)
   const [tasks, setTasks] = useState([]);
+  const [chartMode, setChartMode] = useState('');
   const [evaluationRun, setEvaluationRun] = useState(null);
   const currentEvaluation = evaluationRun?.boardId === boardId ? evaluationRun : null;
   const latestEvaluation = currentEvaluation?.report;
@@ -238,7 +241,7 @@ const App = () => {
   useEffect(() => {
     let unsubscribeTheme = null;
 
-    if (window.TrelloPowerUp) {
+    if (window.parent !== window && window.TrelloPowerUp) {
       const t = window.TrelloPowerUp.iframe({
         appKey: DEFAULT_TRELLO_APP_KEY || undefined,
         appName: DEFAULT_APP_NAME
@@ -349,6 +352,7 @@ const App = () => {
     resizeTrelloIframe();
   }, [
     tasks,
+    chartMode,
     documents,
     activeTab,
     uploadMode,
@@ -386,13 +390,6 @@ const App = () => {
     [tasks]
   );
 
-  // Định mức giờ chuẩn của 1 nhân sự trong 1 Sprint (8h/ngày làm việc)
-  const standardHoursPerSprint = useMemo(() => {
-    const dur = Math.max(1, Number(sprintDurationDays) || 14);
-    const workDays = Math.max(1, Math.round((dur * 5) / 7));
-    return workDays * 8;
-  }, [sprintDurationDays]);
-
   const groupedSprintBuckets = useMemo(() => {
     const map = new Map();
     for (const s of plannedSprintSchedule) {
@@ -419,60 +416,6 @@ const App = () => {
 
     return Array.from(map.values());
   }, [tasks, plannedSprintSchedule, sprintStartDate]);
-
-  // Tính toán Tải công việc (Workload Capacity Bar) của từng nhân sự
-  const memberWorkloadSummary = useMemo(() => {
-    if (tasks.length === 0) return [];
-    const capacities = new Map(plannedSprintSchedule.map(sprint => [
-      sprint.name,
-      ((Date.parse(sprint.endDate) - Date.parse(sprint.startDate)) / 86400000 + 1) * 40 / 7,
-    ]));
-
-    const map = new Map();
-    tasks.forEach(t => {
-      const key = t.assigneeId || t.assigneeName || 'Chưa gán';
-      const name = t.assigneeName || 'Chưa gán';
-      const role = t.role || 'Thành viên';
-      const hours = Number(t.estimatedHours) || 0;
-      const sName = (t.sprint || 'Sprint 1').trim();
-
-      if (!map.has(key)) {
-        map.set(key, {
-          key,
-          name,
-          role,
-          totalHours: 0,
-          bySprint: {}
-        });
-      }
-      const entry = map.get(key);
-      entry.totalHours += hours;
-      entry.bySprint[sName] = (entry.bySprint[sName] || 0) + hours;
-    });
-
-    return Array.from(map.values()).map(item => {
-      let peakSprintName = '';
-      let peakSprintHours = 0;
-      let peakCapacity = standardHoursPerSprint;
-      for (const [sName, hours] of Object.entries(item.bySprint)) {
-        const capacity = capacities.get(sName) ?? standardHoursPerSprint;
-        if (hours / capacity > peakSprintHours / peakCapacity) {
-          peakSprintHours = hours;
-          peakSprintName = sName;
-          peakCapacity = capacity;
-        }
-      }
-      const sprintUtilPercent = Math.round((peakSprintHours / peakCapacity) * 100);
-      return {
-        ...item,
-        peakSprintName,
-        peakSprintHours,
-        peakCapacity,
-        sprintUtilPercent,
-        isOverloaded: sprintUtilPercent > 100
-      };
-    });
-  }, [tasks, plannedSprintSchedule, standardHoursPerSprint]);
 
   const availableSprintNames = useMemo(() => {
     const set = new Set(plannedSprintSchedule.map(s => s.name));
@@ -649,7 +592,7 @@ const App = () => {
         if (data.requirements && report.weakMetrics.length > 0) {
           const feedback = report.weakMetrics;
           const previousWbs = JSON.stringify(data.tasks.map(task => ({
-            title: task.title, description: task.description?.slice(0, 200), reqIds: task.reqIds, taskType: task.taskType, sprint: task.sprint,
+            title: task.title, description: task.description?.slice(0, 200), reqIds: task.reqIds, taskType: task.taskType, sprint: task.sprint, deliverables: task.deliverables, edgeCases: task.edgeCases,
             dependencies: task.dependencies, pert: task.pert, acceptanceCriteria: task.acceptanceCriteria,
           })));
           try {
@@ -843,7 +786,10 @@ const App = () => {
       'Giờ ước tính (Hours)',
       'Ngày bắt đầu (Start)',
       'Hạn hoàn thành (Due)',
-      'Checklist (Definition of Done)',
+      'Các bước thực hiện',
+      'Đầu ra bàn giao',
+      'Tiêu chí nghiệm thu',
+      'Tình huống cần xử lý',
       'Nguồn tham chiếu (RAG)'
     ];
 
@@ -863,6 +809,9 @@ const App = () => {
       t.startDate || '',
       t.dueDate || '',
       Array.isArray(t.subtasks) ? t.subtasks.join(' | ') : '',
+      t.deliverables || '',
+      t.acceptanceCriteria?.join(' | ') || '',
+      t.edgeCases?.join(' | ') || '',
       t.referenceSource || ''
     ]);
 
@@ -890,16 +839,19 @@ const App = () => {
       `- **Tổng quỹ giờ ước tính:** ${totalEstimatedHours.toFixed(1)} giờ`,
       `- **Ngày xuất báo cáo:** ${getTodayIso()}`,
       '',
-      '| # | Sprint | Công việc | Vai trò | Phụ trách | Ưu tiên | Giờ | Bắt đầu -> Hạn chót | Checklist (DoD) |',
-      '|---|---|---|---|---|---|---:|---|---|'
+      '| # | Sprint | Công việc | Vai trò | Phụ trách | Ưu tiên | Giờ | Bắt đầu -> Hạn chót | Các bước thực hiện | Đầu ra bàn giao | Tiêu chí nghiệm thu | Tình huống cần xử lý |',
+      '|---|---|---|---|---|---|---:|---|---|---|---|---|'
     ];
 
-    tasks.forEach((t, i) => {
-      const checklistStr = Array.isArray(t.subtasks) ? t.subtasks.map(s => `• ${s}`).join('<br/>') : '';
-      lines.push(
-        `| ${i + 1} | ${t.sprint} | **${t.title}** | ${t.role} | ${t.assigneeName} | ${t.priority || 'Medium'} | ${t.estimatedHours}h | ${t.startDate} → ${t.dueDate} | ${checklistStr} |`
-      );
-    });
+    const markdownCell = value => String(value ?? '').replace(/\|/g, '\\|').replace(/\r?\n/g, '<br/>');
+    for (const [index, task] of tasks.entries()) {
+      const cells = [
+        index + 1, task.sprint, task.title, task.role, task.assigneeName, task.priority || 'Medium',
+        `${task.estimatedHours}h`, `${task.startDate} → ${task.dueDate}`, task.subtasks?.join('<br/>'),
+        task.deliverables, task.acceptanceCriteria?.join('<br/>'), task.edgeCases?.join('<br/>'),
+      ];
+      lines.push(`| ${cells.map(markdownCell).join(' | ')} |`);
+    }
 
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1300,41 +1252,20 @@ const App = () => {
           {/* Danh sách kết quả WBS gom nhóm theo Sprint */}
           {tasks.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
-              {/* Thanh Cảnh báo Tải Nhân Sự (Workload Capacity Bar) */}
-              <div className="pu-workload-box">
-                <div className="pu-workload-header">
-                  <strong>📊 Cân bằng tải Nhân sự (Workload Capacity • Định mức theo thời lượng Sprint):</strong>
+              <div className="pu-planning-charts">
+                <div className="pu-eval-actions">
+                  {[
+                    ['gantt', 'Lịch Gantt'],
+                    ['workload', 'Khối lượng theo Sprint'],
+                  ].map(([mode, label]) => (
+                    <button type="button" className="pu-tab-btn" key={mode} aria-pressed={chartMode === mode}
+                      onClick={() => setChartMode(chartMode === mode ? '' : mode)}>{label}</button>
+                  ))}
                 </div>
-                <div className="pu-workload-list">
-                  {memberWorkloadSummary.map((mw) => {
-                    const barPercent = Math.min(100, mw.sprintUtilPercent);
-                    const statusClass = mw.sprintUtilPercent > 100
-                      ? 'overloaded'
-                      : mw.sprintUtilPercent >= 80
-                        ? 'warning'
-                        : 'normal';
-
-                    return (
-                      <div key={mw.key} className="pu-workload-item">
-                        <div className="pu-workload-top">
-                          <span>
-                            <strong>👤 {mw.name}</strong> <span className="pu-muted-inline">({mw.role})</span>
-                          </span>
-                          <span className={`pu-workload-badge ${statusClass}`}>
-                            Đỉnh tải {mw.peakSprintName}: {mw.peakSprintHours.toFixed(1)}h / {mw.peakCapacity}h ({mw.sprintUtilPercent}%)
-                            {mw.isOverloaded ? ' ⚠️ Quá tải!' : ''} • Tổng: {mw.totalHours.toFixed(1)}h
-                          </span>
-                        </div>
-                        <div className="pu-workload-track">
-                          <div
-                            className={`pu-workload-fill ${statusClass}`}
-                            style={{ width: `${barPercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                {chartMode && <Suspense fallback={<p role="status">Đang tải biểu đồ…</p>}>
+                  <PlanningCharts mode={chartMode} tasks={tasks} sprintSchedule={plannedSprintSchedule}
+                    boardMembers={boardMembers} onResize={resizeTrelloIframe} />
+                </Suspense>}
               </div>
 
               {/* Thanh Công cụ WBS & Xuất Báo cáo (Excel CSV / Markdown) */}
@@ -1443,6 +1374,7 @@ const App = () => {
                                 <input
                                   type="text"
                                   value={task.title}
+                                  aria-label="Tên công việc"
                                   onChange={(e) => handleUpdateTaskField(originalIndex, 'title', e.target.value)}
                                   placeholder="Nhập tên công việc..."
                                   className={`pu-input pu-title-input ${validation.errors.title ? 'input-error' : ''}`}
@@ -1489,10 +1421,28 @@ const App = () => {
                                 className="pu-textarea"
                               />
 
+                              {(task.deliverables || task.acceptanceCriteria?.length || task.edgeCases?.length) && (
+                                <details className="pu-eval-detail">
+                                  <summary>Đầu ra và nghiệm thu</summary>
+                                  <div className="pu-eval-detail-body">
+                                    {task.deliverables && <p><strong>Đầu ra bàn giao:</strong> {task.deliverables}</p>}
+                                    {[
+                                      ['Tiêu chí nghiệm thu', task.acceptanceCriteria],
+                                      ['Tình huống cần xử lý', task.edgeCases],
+                                    ].map(([label, items]) => items?.length ? (
+                                      <div key={label}>
+                                        <strong>{label}</strong>
+                                        <ul>{items.map((item, index) => <li key={index}>{item}</li>)}</ul>
+                                      </div>
+                                    ) : null)}
+                                  </div>
+                                </details>
+                              )}
+
                               {/* Dòng 2.5: Checklist (Subtasks / Definition of Done) */}
                               <div className="pu-checklist-box">
                                 <div className="pu-checklist-header">
-                                  <span>☑️ Checklist / Tiêu chí nghiệm thu ({task.subtasks?.length || 0} bước):</span>
+                                  <span>☑️ Các bước thực hiện ({task.subtasks?.length || 0} bước):</span>
                                   <button
                                     type="button"
                                     onClick={() => handleAddSubtask(originalIndex)}
@@ -1510,7 +1460,7 @@ const App = () => {
                                         value={st}
                                         onChange={(e) => handleSubtaskChange(originalIndex, sIdx, e.target.value)}
                                         className="pu-input pu-subtask-input"
-                                        placeholder="Nhập tiêu chí nghiệm thu hoặc bước thực hiện..."
+                                        placeholder="Nhập bước thực hiện..."
                                       />
                                       <button
                                         type="button"
