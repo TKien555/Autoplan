@@ -1,0 +1,1362 @@
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import './App.css';
+import GanttChart from './components/GanttChart';
+import WorkloadHeatmap from './components/WorkloadHeatmap';
+
+const API_BASE_URL = '/api';
+
+const SUGGESTED_ROLES = [
+  'Full-stack Developer',
+  'Backend Developer',
+  'Frontend Developer',
+  'Mobile Developer',
+  'UI/UX Designer',
+  'QA / Tester',
+  'Business Analyst (BA)',
+  'Project Manager (PM)',
+  'DevOps / AI Engineer'
+];
+
+const getTodayIso = () => new Date().toISOString().slice(0, 10);
+
+const addDaysIso = (baseIso, days) => {
+  const d = new Date(`${baseIso || getTodayIso()}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return getTodayIso();
+  d.setUTCDate(d.getUTCDate() + Number(days || 0));
+  return d.toISOString().slice(0, 10);
+};
+
+function validateTaskItem(task) {
+  const errors = {};
+  if (!task.title || !task.title.trim()) {
+    errors.title = 'Tên Task không được để trống.';
+  } else if (task.title.trim().length < 3) {
+    errors.title = 'Tên Task tối thiểu 3 ký tự.';
+  }
+
+  if (!task.sprint || !task.sprint.trim()) {
+    errors.sprint = 'Tên Sprint không được để trống.';
+  }
+
+  const hours = Number(task.estimatedHours);
+  if (Number.isNaN(hours) || hours < 0.5 || hours > 200) {
+    errors.estimatedHours = 'Giờ ước tính phải từ 0.5h đến 200h.';
+  }
+
+  if (task.startDate && task.dueDate && task.dueDate < task.startDate) {
+    errors.dates = 'Hạn hoàn thành (Due Date) không được nhỏ hơn Ngày bắt đầu.';
+  }
+
+  return {
+    isValid: Object.keys(errors).length === 0,
+    errors
+  };
+}
+
+async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 55000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: options.signal || controller.signal
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 503) {
+      const retryAfter = response.headers.get('Retry-After') || 10;
+      throw new Error(data.error || `Hệ thống AI đang bận, vui lòng thử lại sau ${retryAfter} giây.`);
+    }
+    if (!response.ok && !data.error) {
+      throw new Error(`Lỗi máy chủ (HTTP ${response.status})`);
+    }
+    return data;
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Yêu cầu đã vượt quá thời gian chờ (55 giây). Vui lòng thử lại.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(id);
+  }
+}
+
+const App = () => {
+  const [trello, setTrello] = useState(null);
+  const [activeTab, setActiveTab] = useState('planner');
+  const [plannerViewMode, setPlannerViewMode] = useState('cards'); // 'cards' | 'gantt' | 'heatmap'
+  const [errorBanner, setErrorBanner] = useState('');
+
+  // State dữ liệu Board Trello
+  const [boardId, setBoardId] = useState('');
+  const [boardMembers, setBoardMembers] = useState([]);
+  const [memberRoles, setMemberRoles] = useState({});
+  const [boardLists, setBoardLists] = useState([]);
+
+  // State cấu hình đẩy thẻ lên Trello ('sprint_lists' | 'existing' | 'new')
+  const [targetListMode, setTargetListMode] = useState('sprint_lists');
+  const [sprintListPrefix, setSprintListPrefix] = useState('');
+  const [selectedListId, setSelectedListId] = useState('');
+  const [newListName, setNewListName] = useState('');
+  const [trelloApiKey, setTrelloApiKey] = useState('');
+  const [trelloToken, setTrelloToken] = useState('');
+  const [showCredentials, setShowCredentials] = useState(false);
+  const [pushingToTrello, setPushingToTrello] = useState(false);
+  const [pushSuccessMsg, setPushSuccessMsg] = useState('');
+  const [failedCards, setFailedCards] = useState([]);
+
+  // State thông tin công việc & Cấu hình Đa Sprint
+  const [cardName, setCardName] = useState('');
+  const [description, setDescription] = useState('');
+  const [sprintPrefix, setSprintPrefix] = useState('Sprint');
+  const [sprintCount, setSprintCount] = useState(3);
+  const [sprintStartDate, setSprintStartDate] = useState(getTodayIso());
+  const [sprintDurationDays, setSprintDurationDays] = useState(14);
+  const [useRag, setUseRag] = useState(true);
+
+  // State kết quả WBS
+  const [tasks, setTasks] = useState([]);
+  const [ragMetadata, setRagMetadata] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // State Quản lý Tài liệu chuyên môn (RAG)
+  const [documents, setDocuments] = useState([]);
+  const [uploadMode, setUploadMode] = useState('file');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [manualDocName, setManualDocName] = useState('');
+  const [manualText, setManualText] = useState('');
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const roleSaveTimerRef = useRef(null);
+  const credSaveTimerRef = useRef(null);
+
+  const resizeTrelloIframe = useCallback(() => {
+    if (trello) {
+      window.requestAnimationFrame(() => {
+        trello.sizeTo('#powerup-content').done();
+      });
+    }
+  }, [trello]);
+
+  const getAuthHeaders = useCallback(async (extraHeaders = {}) => {
+    let token = '';
+    if (trello && boardId) {
+      try {
+        token = await trello.jwt({ state: JSON.stringify({ boardId }) });
+      } catch (err) {
+        console.warn('Không thể tạo Trello JWT, dùng token dev dự phòng:', err.message);
+      }
+    }
+    if (!token) {
+      token = btoa(JSON.stringify({ boardId: boardId || 'legacy', memberId: 'dev_member' }));
+    }
+    return {
+      ...extraHeaders,
+      Authorization: `Bearer ${token}`
+    };
+  }, [trello, boardId]);
+
+  const fetchDocuments = useCallback(async () => {
+    if (!boardId) return;
+    try {
+      const headers = await getAuthHeaders();
+      const data = await fetchJsonWithTimeout(`${API_BASE_URL}/documents`, { headers }, 15000);
+      if (data.success) {
+        setDocuments(data.documents);
+      }
+    } catch (err) {
+      console.error('Lỗi tải danh sách tài liệu:', err.message);
+    }
+  }, [boardId, getAuthHeaders]);
+
+  const refreshBoardLists = useCallback(async () => {
+    if (trello) {
+      try {
+        const listsData = await trello.lists('all');
+        if (Array.isArray(listsData) && listsData.length > 0) {
+          setBoardLists(listsData);
+          setSelectedListId(prev => prev || listsData[0].id);
+        }
+      } catch (err) {
+        console.warn('Không thể làm mới danh sách List:', err.message);
+      }
+    }
+  }, [trello]);
+
+  useEffect(() => {
+    if (window.TrelloPowerUp) {
+      const t = window.TrelloPowerUp.iframe();
+      setTrello(t);
+
+      t.card('name', 'desc', 'idList').then(card => {
+        if (card?.name) {
+          setCardName(card.name);
+          setNewListName(`WBS: ${card.name}`);
+        }
+        if (card?.desc) setDescription(card.desc);
+        if (card?.idList) setSelectedListId(card.idList);
+      });
+
+      Promise.all([
+        t.board('id', 'members'),
+        t.lists('all'),
+        t.get('board', 'shared', 'memberRoles', {})
+      ]).then(async ([boardData, listsData, savedRoles]) => {
+        if (boardData?.id) setBoardId(boardData.id);
+
+        if (Array.isArray(boardData?.members)) {
+          setBoardMembers(boardData.members);
+          const initialRoles = { ...savedRoles };
+          boardData.members.forEach(m => {
+            if (!initialRoles[m.id]) {
+              initialRoles[m.id] = 'Full-stack Developer';
+            }
+          });
+          setMemberRoles(initialRoles);
+        }
+
+        if (Array.isArray(listsData) && listsData.length > 0) {
+          setBoardLists(listsData);
+          setSelectedListId(prev => prev || listsData[0].id);
+        }
+
+        try {
+          const rawSecret = await t.loadSecret('trelloCredentials');
+          if (rawSecret) {
+            const parsed = JSON.parse(rawSecret);
+            if (parsed?.apiKey) setTrelloApiKey(parsed.apiKey);
+            if (parsed?.token) setTrelloToken(parsed.token);
+          }
+        } catch (secretErr) {
+          console.warn('⚠️ Không thể giải mã trelloCredentials:', secretErr.message);
+        }
+      });
+
+      t.render(() => t.sizeTo('#powerup-content').done());
+    } else {
+      setBoardId('legacy');
+      setCardName('Xây dựng Hệ thống Quản lý Đơn hàng & Thanh toán Đa kênh');
+      setNewListName('WBS: Quản lý Đơn hàng');
+    }
+
+    return () => {
+      if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
+      if (credSaveTimerRef.current) clearTimeout(credSaveTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (boardId) {
+      fetchDocuments();
+    }
+  }, [boardId, fetchDocuments]);
+
+  useEffect(() => {
+    resizeTrelloIframe();
+  }, [
+    tasks,
+    documents,
+    activeTab,
+    uploadMode,
+    loading,
+    uploadingDoc,
+    pushingToTrello,
+    showCredentials,
+    targetListMode,
+    pushSuccessMsg,
+    failedCards,
+    errorBanner,
+    resizeTrelloIframe
+  ]);
+
+  const plannedSprintSchedule = useMemo(() => {
+    const cleanPref = (sprintPrefix || 'Sprint').trim().replace(/\s+\d+$/, '') || 'Sprint';
+    const count = Math.max(1, Math.min(6, Number(sprintCount) || 1));
+    const dur = Math.max(1, Math.min(60, Number(sprintDurationDays) || 14));
+    const base = sprintStartDate || getTodayIso();
+
+    const list = [];
+    for (let i = 0; i < count; i++) {
+      const sStart = addDaysIso(base, i * dur);
+      const sEnd = addDaysIso(sStart, dur - 1);
+      list.push({
+        name: `${cleanPref} ${i + 1}`,
+        startDate: sStart,
+        endDate: sEnd
+      });
+    }
+    return list;
+  }, [sprintPrefix, sprintCount, sprintStartDate, sprintDurationDays]);
+
+  const taskValidationList = useMemo(() => tasks.map(validateTaskItem), [tasks]);
+  const hasAnyInvalidTask = useMemo(
+    () => taskValidationList.some(v => !v.isValid),
+    [taskValidationList]
+  );
+  const totalEstimatedHours = useMemo(
+    () => tasks.reduce((sum, t) => sum + (Number(t.estimatedHours) || 0), 0),
+    [tasks]
+  );
+
+  const groupedSprintBuckets = useMemo(() => {
+    const map = new Map();
+    for (const s of plannedSprintSchedule) {
+      map.set(s.name, {
+        sprintName: s.name,
+        startDate: s.startDate,
+        endDate: s.endDate,
+        items: []
+      });
+    }
+
+    tasks.forEach((task, originalIndex) => {
+      const sName = (task.sprint || 'Sprint 1').trim() || 'Sprint 1';
+      if (!map.has(sName)) {
+        map.set(sName, {
+          sprintName: sName,
+          startDate: task.startDate || sprintStartDate,
+          endDate: task.dueDate || addDaysIso(sprintStartDate, 13),
+          items: []
+        });
+      }
+      map.get(sName).items.push({ task, originalIndex });
+    });
+
+    return Array.from(map.values()).filter(bucket => bucket.items.length > 0);
+  }, [tasks, plannedSprintSchedule, sprintStartDate]);
+
+  const availableSprintNames = useMemo(() => {
+    const set = new Set(plannedSprintSchedule.map(s => s.name));
+    tasks.forEach(t => {
+      if (t.sprint?.trim()) set.add(t.sprint.trim());
+    });
+    return Array.from(set);
+  }, [plannedSprintSchedule, tasks]);
+
+  const handleRoleChange = (memberId, newRole) => {
+    const updated = { ...memberRoles, [memberId]: newRole };
+    setMemberRoles(updated);
+    if (trello) {
+      if (roleSaveTimerRef.current) clearTimeout(roleSaveTimerRef.current);
+      roleSaveTimerRef.current = setTimeout(() => {
+        trello.set('board', 'shared', 'memberRoles', updated);
+      }, 400);
+    }
+  };
+
+  const handleSaveCredentials = (key, token) => {
+    setTrelloApiKey(key);
+    setTrelloToken(token);
+    if (trello) {
+      if (credSaveTimerRef.current) clearTimeout(credSaveTimerRef.current);
+      credSaveTimerRef.current = setTimeout(async () => {
+        try {
+          await trello.storeSecret('trelloCredentials', JSON.stringify({ apiKey: key, token }));
+        } catch (err) {
+          console.error('Lỗi khi lưu secret:', err.message);
+        }
+      }, 400);
+    }
+  };
+
+  const handleBreakdown = async () => {
+    if (loading) return;
+    setErrorBanner('');
+
+    if (!cardName || cardName.trim().length < 3) {
+      return setErrorBanner('Tiêu đề công việc phải có ít nhất 3 ký tự.');
+    }
+    const countNum = Number(sprintCount);
+    if (Number.isNaN(countNum) || countNum < 1 || countNum > 6) {
+      return setErrorBanner('Số lượng Sprint phải từ 1 đến 6.');
+    }
+    const durationNum = Number(sprintDurationDays);
+    if (Number.isNaN(durationNum) || durationNum < 1 || durationNum > 60) {
+      return setErrorBanner('Thời lượng mỗi Sprint phải từ 1 đến 60 ngày.');
+    }
+
+    setLoading(true);
+    setPushSuccessMsg('');
+    setFailedCards([]);
+
+    try {
+      const teamMembersPayload = boardMembers.map(m => ({
+        id: m.id,
+        fullName: m.fullName || m.username,
+        username: m.username,
+        role: memberRoles[m.id] || 'Full-stack Developer'
+      }));
+
+      const rolesSummary = teamMembersPayload.map(m => `${m.fullName} (${m.role})`).join(', ');
+      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
+
+      const data = await fetchJsonWithTimeout(
+        `${API_BASE_URL}/breakdown`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            taskName: cardName.trim(),
+            description: description.trim(),
+            teamSize: teamMembersPayload.length || 1,
+            roles: rolesSummary,
+            teamMembers: teamMembersPayload,
+            methodology: 'Agile',
+            useRag,
+            sprintPrefix: sprintPrefix.trim() || 'Sprint',
+            sprintCount: countNum,
+            sprintStartDate: sprintStartDate || getTodayIso(),
+            sprintDurationDays: durationNum
+          })
+        },
+        55000
+      );
+
+      if (data.success) {
+        const enriched = (data.tasks || []).map((t, i) => ({
+          ...t,
+          _uid: `task_${Date.now()}_${i}`,
+          sprint: t.sprint || plannedSprintSchedule[0]?.name || 'Sprint 1',
+          startDate: t.startDate || sprintStartDate || getTodayIso(),
+          dueDate: t.dueDate || addDaysIso(sprintStartDate, 2)
+        }));
+        setTasks(enriched);
+        setRagMetadata(data.ragMetadata);
+      } else {
+        setErrorBanner(data.error || 'Có lỗi xảy ra từ máy chủ AI.');
+      }
+    } catch (error) {
+      setErrorBanner(error.message || 'Không thể kết nối đến Backend.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateTaskField = (taskIndex, field, value) => {
+    setTasks(prev =>
+      prev.map((task, idx) => {
+        if (idx !== taskIndex) return task;
+        if (field === 'sprint') {
+          const matchedSchedule = plannedSprintSchedule.find(
+            s => s.name.toLowerCase() === String(value || '').trim().toLowerCase()
+          );
+          if (matchedSchedule) {
+            return {
+              ...task,
+              sprint: value,
+              startDate: matchedSchedule.startDate,
+              dueDate: addDaysIso(matchedSchedule.startDate, Math.min(3, Number(sprintDurationDays) - 1))
+            };
+          }
+        }
+        return { ...task, [field]: value };
+      })
+    );
+  };
+
+  const handleChangeTaskAssignee = (taskIndex, newMemberId) => {
+    const selectedMember = boardMembers.find(m => m.id === newMemberId);
+    setTasks(prev =>
+      prev.map((task, idx) => {
+        if (idx !== taskIndex) return task;
+        return {
+          ...task,
+          assigneeId: selectedMember ? selectedMember.id : null,
+          assigneeName: selectedMember ? (selectedMember.fullName || selectedMember.username) : 'Chưa gán',
+          role: selectedMember ? (memberRoles[selectedMember.id] || task.role) : task.role
+        };
+      })
+    );
+  };
+
+  const handleAddBlankTask = (targetSprintName = '') => {
+    const defaultMember = boardMembers[0] || null;
+    const chosenSprint = targetSprintName || plannedSprintSchedule[0]?.name || 'Sprint 1';
+    const matchedSchedule = plannedSprintSchedule.find(s => s.name === chosenSprint);
+    const baseStart = matchedSchedule ? matchedSchedule.startDate : (sprintStartDate || getTodayIso());
+
+    const newTask = {
+      _uid: `task_manual_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      title: `Công việc bổ sung #${tasks.length + 1}`,
+      description: 'Mô tả chi tiết công việc cần thực hiện...',
+      role: defaultMember ? (memberRoles[defaultMember.id] || 'Full-stack Developer') : 'Full-stack Developer',
+      assigneeId: defaultMember ? defaultMember.id : null,
+      assigneeName: defaultMember ? (defaultMember.fullName || defaultMember.username) : 'Chưa gán',
+      estimatedHours: 4,
+      sprint: chosenSprint,
+      startDate: baseStart,
+      dueDate: addDaysIso(baseStart, 2),
+      referenceSource: 'Thêm thủ công'
+    };
+    setTasks(prev => [...prev, newTask]);
+  };
+
+  const handleRemoveTask = (taskIndex) => {
+    setTasks(prev => prev.filter((_, idx) => idx !== taskIndex));
+  };
+
+  const handleResetTasks = () => {
+    setTasks([]);
+    setRagMetadata(null);
+    setPushSuccessMsg('');
+    setFailedCards([]);
+    setErrorBanner('');
+  };
+
+  const pushTasksBatch = async (tasksToPush, isRetryFailed = false) => {
+    if (tasksToPush.length === 0 || pushingToTrello) return;
+    setErrorBanner('');
+
+    for (let i = 0; i < tasksToPush.length; i++) {
+      const check = validateTaskItem(tasksToPush[i]);
+      if (!check.isValid) {
+        const firstErr = Object.values(check.errors)[0];
+        return setErrorBanner(`Task #${i + 1} ("${tasksToPush[i].title || 'Chưa đặt tên'}") chưa hợp lệ: ${firstErr}`);
+      }
+    }
+
+    if (targetListMode === 'new' && !newListName.trim()) {
+      return setErrorBanner('Vui lòng nhập tên cột (List) mới cần tạo trên bảng Trello.');
+    }
+    if (targetListMode === 'existing' && !selectedListId) {
+      return setErrorBanner('Vui lòng chọn cột (List) đích trên bảng Trello.');
+    }
+    if (!trelloApiKey.trim() || !trelloToken.trim()) {
+      setShowCredentials(true);
+      return setErrorBanner('Vui lòng nhập Trello API Key và Token cá nhân trước khi tạo thẻ.');
+    }
+
+    setPushingToTrello(true);
+    if (!isRetryFailed) setPushSuccessMsg('');
+
+    try {
+      const requestId = window.crypto?.randomUUID
+        ? window.crypto.randomUUID()
+        : `req_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+      const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
+
+      const data = await fetchJsonWithTimeout(
+        `${API_BASE_URL}/trello/push-tasks`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            requestId,
+            targetMode: targetListMode,
+            sprintListPrefix: sprintListPrefix.trim(),
+            listId: targetListMode === 'existing' ? selectedListId : '',
+            newListName: targetListMode === 'new' ? newListName.trim() : '',
+            tasks: tasksToPush,
+            parentCardName: cardName,
+            trelloApiKey: trelloApiKey.trim(),
+            trelloToken: trelloToken.trim()
+          })
+        },
+        55000
+      );
+
+      if (data.listId && targetListMode === 'new') {
+        setSelectedListId(data.listId);
+        setTargetListMode('existing');
+      }
+
+      if (data.success) {
+        setPushSuccessMsg(data.message);
+        setFailedCards(Array.isArray(data.failedCards) ? data.failedCards : []);
+        await refreshBoardLists();
+      } else {
+        setShowCredentials(true);
+        setFailedCards(Array.isArray(data.failedCards) ? data.failedCards : []);
+        setErrorBanner(data.error || 'Không thể tạo thẻ trên Trello.');
+      }
+    } catch (err) {
+      setErrorBanner(err.message || 'Lỗi kết nối khi đẩy dữ liệu lên Trello.');
+    } finally {
+      setPushingToTrello(false);
+    }
+  };
+
+  const handleAddDocument = async (e) => {
+    e.preventDefault();
+    if (uploadingDoc) return;
+    setErrorBanner('');
+
+    if (uploadMode === 'file' && !selectedFile) {
+      return setErrorBanner('Vui lòng chọn một file tài liệu (.pdf, .txt, .md, .json, .csv).');
+    }
+    if (uploadMode === 'text' && !manualText.trim()) {
+      return setErrorBanner('Vui lòng nhập nội dung tài liệu chuyên môn.');
+    }
+
+    setUploadingDoc(true);
+    try {
+      let options;
+      if (uploadMode === 'file') {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        const headers = await getAuthHeaders();
+        options = { method: 'POST', headers, body: formData };
+      } else {
+        const headers = await getAuthHeaders({ 'Content-Type': 'application/json' });
+        options = {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            docName: manualDocName.trim() || 'Tài liệu nội bộ',
+            textContent: manualText
+          })
+        };
+      }
+
+      const data = await fetchJsonWithTimeout(`${API_BASE_URL}/documents`, options, 60000);
+      if (data.success) {
+        setSelectedFile(null);
+        setManualDocName('');
+        setManualText('');
+        await fetchDocuments();
+      } else {
+        setErrorBanner(data.error || 'Lỗi khi nạp tài liệu.');
+      }
+    } catch (err) {
+      setErrorBanner(err.message || 'Không thể tải tài liệu lên Backend.');
+    } finally {
+      setUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId) => {
+    setErrorBanner('');
+    try {
+      const headers = await getAuthHeaders();
+      const data = await fetchJsonWithTimeout(
+        `${API_BASE_URL}/documents/${docId}`,
+        { method: 'DELETE', headers },
+        15000
+      );
+      if (data.success) {
+        fetchDocuments();
+      } else {
+        setErrorBanner(data.error || 'Không thể xóa tài liệu.');
+      }
+    } catch (err) {
+      setErrorBanner(err.message || 'Lỗi khi xóa tài liệu.');
+    }
+  };
+
+  return (
+    <div id="powerup-content" className="pu-container">
+      {/* Thanh điều hướng Tab */}
+      <div className="pu-tab-bar">
+        <button
+          type="button"
+          onClick={() => { setActiveTab('planner'); setErrorBanner(''); }}
+          className={`pu-tab-btn ${activeTab === 'planner' ? 'active' : ''}`}
+        >
+          📋 Lập kế hoạch Đa Sprint
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab('team'); setErrorBanner(''); }}
+          className={`pu-tab-btn ${activeTab === 'team' ? 'active' : ''}`}
+        >
+          👥 Vai trò nhóm ({boardMembers.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => { setActiveTab('knowledge'); setErrorBanner(''); }}
+          className={`pu-tab-btn ${activeTab === 'knowledge' ? 'active' : ''}`}
+        >
+          📚 RAG ({documents.length})
+        </button>
+      </div>
+
+      {errorBanner && (
+        <div className="pu-error-banner">
+          <span>⚠️ {errorBanner}</span>
+          <button type="button" onClick={() => setErrorBanner('')} className="pu-close-btn">
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* TAB 1: LẬP KẾ HOẠCH ĐA SPRINT */}
+      {activeTab === 'planner' && (
+        <div>
+          <div className="pu-form-group">
+            <label className="pu-label">Tiêu đề dự án / Epic cần phân rã:</label>
+            <input
+              type="text"
+              value={cardName}
+              onChange={(e) => setCardName(e.target.value)}
+              placeholder="Nhập tên công việc hoặc dự án lớn..."
+              className="pu-input"
+            />
+          </div>
+
+          <div className="pu-form-group">
+            <label className="pu-label">Mô tả chi tiết yêu cầu:</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Nhập chi tiết yêu cầu nghiệp vụ, phạm vi chức năng..."
+              rows={3}
+              className="pu-textarea"
+            />
+          </div>
+
+          {/* Cấu hình Lộ trình Đa Sprint */}
+          <div className="pu-sprint-config-box">
+            <div className="pu-section-title">
+              🗓️ Cấu hình Lộ trình Đa Sprint (Multi-Sprint Planning):
+            </div>
+            <div className="pu-sprint-grid">
+              <div style={{ flex: '1 1 95px' }}>
+                <label className="pu-sub-label">Tiền tố Sprint:</label>
+                <input
+                  type="text"
+                  value={sprintPrefix}
+                  onChange={(e) => setSprintPrefix(e.target.value)}
+                  placeholder="VD: Sprint"
+                  className="pu-input"
+                />
+              </div>
+              <div style={{ flex: '0 0 90px' }}>
+                <label className="pu-sub-label">Số Sprint (1-6):</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="6"
+                  value={sprintCount}
+                  onChange={(e) => setSprintCount(e.target.value)}
+                  className="pu-input"
+                />
+              </div>
+              <div style={{ flex: '1 1 125px' }}>
+                <label className="pu-sub-label">Ngày bắt đầu dự án:</label>
+                <input
+                  type="date"
+                  value={sprintStartDate}
+                  onChange={(e) => setSprintStartDate(e.target.value)}
+                  className="pu-input"
+                />
+              </div>
+              <div style={{ flex: '0 0 95px' }}>
+                <label className="pu-sub-label">Ngày / Sprint:</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="60"
+                  value={sprintDurationDays}
+                  onChange={(e) => setSprintDurationDays(e.target.value)}
+                  className="pu-input"
+                />
+              </div>
+            </div>
+
+            <div className="pu-chip-list">
+              {plannedSprintSchedule.map((s) => (
+                <span key={s.name} className="pu-sprint-chip">
+                  <strong>{s.name}:</strong> {s.startDate} → {s.endDate}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Tóm tắt nhân sự */}
+          <div className="pu-team-box">
+            <div className="pu-team-header">
+              <span style={{ fontSize: '12px', fontWeight: 700 }}>
+                👥 Nhân sự trên bảng ({boardMembers.length} thành viên):
+              </span>
+              <button type="button" onClick={() => setActiveTab('team')} className="pu-link-btn">
+                ✏️ Chỉnh sửa vai trò
+              </button>
+            </div>
+            {boardMembers.length === 0 ? (
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                Đang đọc danh sách thành viên từ Board Trello (hoặc chế độ Local)...
+              </span>
+            ) : (
+              <div className="pu-chip-list">
+                {boardMembers.map(member => (
+                  <span key={member.id} className="pu-member-chip">
+                    <strong>{member.fullName || member.username}</strong>: {memberRoles[member.id] || 'Full-stack'}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Bật/tắt RAG */}
+          <div className="pu-rag-toggle-box">
+            <label className="pu-checkbox-label">
+              <input
+                type="checkbox"
+                checked={useRag}
+                onChange={(e) => setUseRag(e.target.checked)}
+              />
+              <span>
+                <strong>Sử dụng tri thức chuyên môn của Bảng (RAG)</strong> ({documents.length} tài liệu sẵn sàng)
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleBreakdown}
+            disabled={loading || !cardName.trim()}
+            className="pu-primary-btn"
+          >
+            {loading
+              ? `🤖 AI đang phân tích & chia việc vào ${sprintCount} Sprint...`
+              : tasks.length > 0
+                ? `🔄 Chia lại Task từ đầu vào ${sprintCount} Sprint bằng AI`
+                : `⚡ Tự động phân rã & Chia lộ trình ${sprintCount} Sprint`}
+          </button>
+
+          {ragMetadata && (
+            <div className="pu-rag-banner">
+              {ragMetadata.usedRag ? (
+                <span>
+                  ✅ Đã tham chiếu <strong>{ragMetadata.matchedChunks.length}</strong> phân đoạn từ tài liệu chuyên môn.
+                </span>
+              ) : (
+                <span>ℹ️ Phân rã theo tiêu chuẩn ngành.</span>
+              )}
+            </div>
+          )}
+
+          {/* Danh sách kết quả WBS gom nhóm theo Sprint */}
+          {tasks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+              <div className="pu-result-header">
+                <div>
+                  <strong style={{ fontSize: '13px' }}>
+                    Lộ trình {groupedSprintBuckets.length} Sprint ({tasks.length} tasks • Tổng: {totalEstimatedHours.toFixed(1)}h)
+                  </strong>
+                  <span style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Chỉnh sửa trực tiếp bên dưới. Bạn có thể chuyển Task sang Sprint khác hoặc thêm/xóa Task tùy ý.
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleAddBlankTask()}
+                    className="pu-small-btn primary"
+                  >
+                    ➕ Thêm Task
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleResetTasks}
+                    className="pu-small-btn danger"
+                  >
+                    🗑️ Xóa hết
+                  </button>
+                </div>
+              </div>
+
+              <datalist id="available-sprints-list">
+                {availableSprintNames.map(sName => (
+                  <option key={sName} value={sName} />
+                ))}
+              </datalist>
+
+              {/* Bộ chọn Chế độ hiển thị: Thẻ Sprint / Gantt / Heatmap */}
+              <div className="pu-view-mode-selector">
+                <button
+                  type="button"
+                  className={`pu-view-mode-btn ${plannerViewMode === 'cards' ? 'active' : ''}`}
+                  onClick={() => setPlannerViewMode('cards')}
+                >
+                  📋 Thẻ Sprint ({tasks.length})
+                </button>
+                <button
+                  type="button"
+                  className={`pu-view-mode-btn ${plannerViewMode === 'gantt' ? 'active' : ''}`}
+                  onClick={() => setPlannerViewMode('gantt')}
+                >
+                  📅 Biểu đồ Gantt
+                </button>
+                <button
+                  type="button"
+                  className={`pu-view-mode-btn ${plannerViewMode === 'heatmap' ? 'active' : ''}`}
+                  onClick={() => setPlannerViewMode('heatmap')}
+                >
+                  🔥 Ma trận nhiệt năng lực
+                </button>
+              </div>
+
+              {plannerViewMode === 'cards' && (
+                <>
+                  {groupedSprintBuckets.map((bucket) => {
+                const sprintHours = bucket.items.reduce(
+                  (sum, item) => sum + (Number(item.task.estimatedHours) || 0),
+                  0
+                );
+
+                return (
+                  <div key={bucket.sprintName} className="pu-sprint-bucket">
+                    <div className="pu-sprint-bucket-header">
+                      <div>
+                        <strong style={{ fontSize: '13px', color: 'var(--accent-primary-hover)' }}>
+                          🗂️ Cột (List): {sprintListPrefix.trim() ? `${sprintListPrefix.trim()} - ${bucket.sprintName}` : bucket.sprintName}
+                        </strong>
+                        <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginLeft: '8px' }}>
+                          ({bucket.items.length} tasks • {sprintHours.toFixed(1)}h)
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleAddBlankTask(bucket.sprintName)}
+                        className="pu-small-btn primary"
+                      >
+                        ➕ Thêm vào {bucket.sprintName}
+                      </button>
+                    </div>
+
+                    <div className="pu-task-list">
+                      {bucket.items.map(({ task, originalIndex }, localIdx) => {
+                        const validation = taskValidationList[originalIndex] || { isValid: true, errors: {} };
+                        return (
+                          <div
+                            key={task._uid || originalIndex}
+                            className={`pu-task-card ${validation.isValid ? '' : 'invalid'}`}
+                          >
+                            {/* Dòng 1: STT + Tên Task + Giờ ước tính + Xóa */}
+                            <div className="pu-task-top-row">
+                              <span className="pu-task-index">#{localIdx + 1}</span>
+                              <input
+                                type="text"
+                                value={task.title}
+                                onChange={(e) => handleUpdateTaskField(originalIndex, 'title', e.target.value)}
+                                placeholder="Nhập tên công việc..."
+                                className={`pu-input pu-title-input ${validation.errors.title ? 'input-error' : ''}`}
+                              />
+                              <div className="pu-hours-wrap" title="Số giờ ước tính">
+                                <input
+                                  type="number"
+                                  step="0.5"
+                                  min="0.5"
+                                  max="200"
+                                  value={task.estimatedHours}
+                                  onChange={(e) => handleUpdateTaskField(originalIndex, 'estimatedHours', e.target.value)}
+                                  className={`pu-input pu-hours-input ${validation.errors.estimatedHours ? 'input-error' : ''}`}
+                                />
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>h</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveTask(originalIndex)}
+                                className="pu-remove-task-btn"
+                                title="Xóa Task này"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* Dòng 2: Mô tả chi tiết */}
+                            <textarea
+                              rows={2}
+                              value={task.description}
+                              onChange={(e) => handleUpdateTaskField(originalIndex, 'description', e.target.value)}
+                              placeholder="Mô tả chi tiết công việc..."
+                              className="pu-textarea"
+                            />
+
+                            {/* Dòng 3: Sprint + Start Date + Due Date */}
+                            <div className="pu-task-meta-grid">
+                              <div style={{ flex: '1 1 105px' }}>
+                                <label className="pu-micro-label">Thuộc Sprint (Cột):</label>
+                                <input
+                                  list="available-sprints-list"
+                                  value={task.sprint || ''}
+                                  onChange={(e) => handleUpdateTaskField(originalIndex, 'sprint', e.target.value)}
+                                  placeholder="VD: Sprint 1"
+                                  className={`pu-input ${validation.errors.sprint ? 'input-error' : ''}`}
+                                  style={{ fontWeight: 700, color: 'var(--accent-primary-hover)' }}
+                                />
+                              </div>
+                              <div style={{ flex: '1 1 120px' }}>
+                                <label className="pu-micro-label">Bắt đầu (Start):</label>
+                                <input
+                                  type="date"
+                                  value={task.startDate || ''}
+                                  onChange={(e) => handleUpdateTaskField(originalIndex, 'startDate', e.target.value)}
+                                  className={`pu-input ${validation.errors.dates ? 'input-error' : ''}`}
+                                />
+                              </div>
+                              <div style={{ flex: '1 1 120px' }}>
+                                <label className="pu-micro-label">Hạn chót (Due):</label>
+                                <input
+                                  type="date"
+                                  value={task.dueDate || ''}
+                                  onChange={(e) => handleUpdateTaskField(originalIndex, 'dueDate', e.target.value)}
+                                  className={`pu-input ${validation.errors.dates ? 'input-error' : ''}`}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Dòng 4: Giao việc & Vai trò */}
+                            <div className="pu-task-footer">
+                              <div className="pu-assignee-group">
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                  👤 Giao cho:
+                                </span>
+                                <select
+                                  value={task.assigneeId || ''}
+                                  onChange={(e) => handleChangeTaskAssignee(originalIndex, e.target.value)}
+                                  className="pu-assignee-select"
+                                >
+                                  <option value="">-- Chưa gán ({task.role || 'Thành viên'}) --</option>
+                                  {boardMembers.map(m => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.fullName || m.username} ({memberRoles[m.id] || 'Thành viên'})
+                                    </option>
+                                  ))}
+                                </select>
+
+                                <input
+                                  type="text"
+                                  value={task.role || ''}
+                                  onChange={(e) => handleUpdateTaskField(originalIndex, 'role', e.target.value)}
+                                  placeholder="Vai trò..."
+                                  className="pu-input pu-role-input"
+                                  title="Vai trò đảm nhận Task này"
+                                />
+                              </div>
+
+                              {task.referenceSource && task.referenceSource !== 'Tiêu chuẩn chung' && (
+                                <span className="pu-source-badge">📖 {task.referenceSource}</span>
+                              )}
+                            </div>
+
+                            {!validation.isValid && (
+                              <div className="pu-field-error">
+                                ⚠️ {Object.values(validation.errors).join(' • ')}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+                </>
+              )}
+
+              {plannerViewMode === 'gantt' && (
+                <GanttChart
+                  tasks={tasks}
+                  sprintSchedule={plannedSprintSchedule}
+                />
+              )}
+
+              {plannerViewMode === 'heatmap' && (
+                <WorkloadHeatmap
+                  tasks={tasks}
+                  boardMembers={boardMembers}
+                  memberRoles={memberRoles}
+                  availableSprintNames={availableSprintNames}
+                />
+              )}
+
+              {/* Khung cấu hình đẩy các Sprint lên Trello */}
+              <div className="pu-push-box">
+                <div className="pu-section-title">
+                  🚀 Tự động tạo Cột (List) theo từng Sprint & Giao thẻ lên Trello
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTargetListMode('sprint_lists')}
+                    className={`pu-subtab-btn ${targetListMode === 'sprint_lists' ? 'active' : ''}`}
+                  >
+                    🗂️ Mỗi Sprint 1 cột riêng ({groupedSprintBuckets.length} cột)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetListMode('existing')}
+                    className={`pu-subtab-btn ${targetListMode === 'existing' ? 'active' : ''}`}
+                  >
+                    📂 Gộp vào 1 cột có sẵn
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTargetListMode('new')}
+                    className={`pu-subtab-btn ${targetListMode === 'new' ? 'active' : ''}`}
+                  >
+                    ➕ Gộp vào 1 cột mới
+                  </button>
+                </div>
+
+                {targetListMode === 'sprint_lists' && (
+                  <div className="pu-form-group">
+                    <label className="pu-label">
+                      Tiền tố cho các cột Sprint trên Trello (Tùy chọn - để trống sẽ đặt tên cột là {groupedSprintBuckets.map(b => `"${b.sprintName}"`).join(', ')}):
+                    </label>
+                    <input
+                      type="text"
+                      value={sprintListPrefix}
+                      onChange={(e) => setSprintListPrefix(e.target.value)}
+                      placeholder="VD: Dự án Thanh toán (Sẽ tạo cột: Dự án Thanh toán - Sprint 1...)"
+                      className="pu-input"
+                    />
+                  </div>
+                )}
+
+                {targetListMode === 'existing' && (
+                  <div className="pu-form-group">
+                    <label className="pu-label">Chọn cột trên bảng để đổ tất cả thẻ công việc vào:</label>
+                    <select
+                      value={selectedListId}
+                      onChange={(e) => setSelectedListId(e.target.value)}
+                      className="pu-select"
+                    >
+                      {boardLists.map(list => (
+                        <option key={list.id} value={list.id}>
+                          {list.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {targetListMode === 'new' && (
+                  <div className="pu-form-group">
+                    <label className="pu-label">Tên cột (List) mới sẽ tạo trên bảng:</label>
+                    <input
+                      type="text"
+                      value={newListName}
+                      onChange={(e) => setNewListName(e.target.value)}
+                      placeholder="VD: WBS - Công việc đã phân rã"
+                      className="pu-input"
+                    />
+                  </div>
+                )}
+
+                <div style={{ marginBottom: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowCredentials(!showCredentials)}
+                    className="pu-link-btn"
+                  >
+                    🔑 {showCredentials ? 'Ẩn cấu hình Trello API Key / Token' : 'Cấu hình Trello API Key & Token cá nhân (Đã mã hóa)'}
+                  </button>
+
+                  {showCredentials && (
+                    <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <input
+                        type="text"
+                        value={trelloApiKey}
+                        onChange={(e) => handleSaveCredentials(e.target.value, trelloToken)}
+                        placeholder="Nhập Trello API Key của bạn"
+                        className="pu-input"
+                      />
+                      <input
+                        type="password"
+                        value={trelloToken}
+                        onChange={(e) => handleSaveCredentials(trelloApiKey, e.target.value)}
+                        placeholder="Nhập Trello Token của bạn"
+                        className="pu-input"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => pushTasksBatch(tasks, false)}
+                  disabled={pushingToTrello || hasAnyInvalidTask || tasks.length === 0}
+                  className="pu-primary-btn pu-push-btn"
+                >
+                  {pushingToTrello
+                    ? '⏳ Đang tạo các cột Sprint & điền thẻ công việc lên Trello...'
+                    : hasAnyInvalidTask
+                      ? '⚠️ Vui lòng sửa các thông tin chưa hợp lệ ở trên'
+                      : targetListMode === 'sprint_lists'
+                        ? `✅ Tạo ${groupedSprintBuckets.length} cột Sprint & Tự động điền ${tasks.length} thẻ (${totalEstimatedHours.toFixed(1)}h)`
+                        : `✅ Tạo ${tasks.length} thẻ (${totalEstimatedHours.toFixed(1)}h) lên Trello ngay`}
+                </button>
+
+                {pushSuccessMsg && (
+                  <div className="pu-success-banner">
+                    🎉 {pushSuccessMsg}
+                  </div>
+                )}
+
+                {failedCards.length > 0 && (
+                  <div className="pu-retry-box">
+                    <div style={{ fontSize: '11.5px', color: 'var(--danger-hover)', marginBottom: '8px' }}>
+                      <strong>Có {failedCards.length} thẻ chưa tạo được:</strong>
+                      <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
+                        {failedCards.map((fc, i) => (
+                          <li key={i}>{fc.title} ({fc.reason})</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={pushingToTrello}
+                      onClick={() => pushTasksBatch(failedCards.map(f => f.task), true)}
+                      className="pu-retry-btn"
+                    >
+                      🔄 Thử lại {failedCards.length} thẻ lỗi
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 2: PHÂN VAI TRÒ NHÓM */}
+      {activeTab === 'team' && (
+        <div>
+          <h4 style={{ fontSize: '14px', marginBottom: '6px' }}>
+            Phân vai trò thành viên trong Board ({boardMembers.length})
+          </h4>
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+            Thiết lập chức vụ chuyên môn cho từng thành viên trên bảng Trello. AI sẽ dựa vào vai trò này để giao đúng việc trong từng Sprint.
+          </p>
+
+          {boardMembers.length === 0 ? (
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Không tìm thấy thành viên nào hoặc Power-Up đang chạy ngoài môi trường Board Trello.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {boardMembers.map(member => (
+                <div key={member.id} className="pu-member-row">
+                  <div style={{ flex: 1 }}>
+                    <strong style={{ fontSize: '13px', display: 'block' }}>
+                      👤 {member.fullName || member.username}
+                    </strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>@{member.username}</span>
+                  </div>
+
+                  <div style={{ flex: 1.3 }}>
+                    <input
+                      list={`role-suggestions-${member.id}`}
+                      value={memberRoles[member.id] || ''}
+                      onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                      placeholder="Nhập hoặc chọn vai trò..."
+                      className="pu-input"
+                    />
+                    <datalist id={`role-suggestions-${member.id}`}>
+                      {SUGGESTED_ROLES.map(role => (
+                        <option key={role} value={role} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB 3: QUẢN LÝ KHO TRI THỨC RAG */}
+      {activeTab === 'knowledge' && (
+        <div>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setUploadMode('file')}
+              className={`pu-subtab-btn ${uploadMode === 'file' ? 'active' : ''}`}
+            >
+              📄 Tải File (.pdf, .txt, .md)
+            </button>
+            <button
+              type="button"
+              onClick={() => setUploadMode('text')}
+              className={`pu-subtab-btn ${uploadMode === 'text' ? 'active' : ''}`}
+            >
+              ✍️ Nhập văn bản trực tiếp
+            </button>
+          </div>
+
+          <form onSubmit={handleAddDocument} className="pu-upload-box">
+            {uploadMode === 'file' ? (
+              <div className="pu-form-group">
+                <label className="pu-label">Chọn tài liệu đặc tả / quy chuẩn (.pdf, .txt, .md, tối đa 10MB):</label>
+                <input
+                  type="file"
+                  accept=".pdf,.txt,.md,.json,.csv"
+                  onChange={(e) => setSelectedFile(e.target.files[0])}
+                  className="pu-file-input"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="pu-form-group">
+                  <label className="pu-label">Tên tài liệu / Quy chuẩn:</label>
+                  <input
+                    type="text"
+                    value={manualDocName}
+                    onChange={(e) => setManualDocName(e.target.value)}
+                    placeholder="VD: Quy chuẩn API Backend & Database"
+                    className="pu-input"
+                  />
+                </div>
+                <div className="pu-form-group">
+                  <label className="pu-label">Nội dung chuyên môn:</label>
+                  <textarea
+                    value={manualText}
+                    onChange={(e) => setManualText(e.target.value)}
+                    placeholder="Dán nội dung kiến trúc, quy trình test, coding convention vào đây..."
+                    rows={4}
+                    className="pu-textarea"
+                  />
+                </div>
+              </>
+            )}
+
+            <button
+              type="submit"
+              disabled={uploadingDoc}
+              className="pu-primary-btn pu-push-btn"
+            >
+              {uploadingDoc ? '⏳ Đang băm nhỏ & tạo Vector Embedding...' : '➕ Nạp vào Bộ nhớ Tri thức của Bảng'}
+            </button>
+          </form>
+
+          <h4 style={{ fontSize: '13px', margin: '14px 0 8px 0' }}>
+            Tài liệu của Bảng này ({documents.length}):
+          </h4>
+          {documents.length === 0 ? (
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+              Chưa có tài liệu chuyên môn nào trên bảng này. Hãy tải lên SRS, SDS hoặc quy chuẩn kỹ thuật.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+              {documents.map((doc) => (
+                <div key={doc.docId} className="pu-doc-item">
+                  <div>
+                    <strong style={{ fontSize: '12.5px', display: 'block' }}>📘 {doc.docName}</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                      {doc.chunkCount} vector chunks • {new Date(doc.createdAt).toLocaleDateString('vi-VN')}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteDocument(doc.docId)}
+                    className="pu-small-btn danger"
+                    title="Xóa tài liệu"
+                  >
+                    Xóa
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default App;

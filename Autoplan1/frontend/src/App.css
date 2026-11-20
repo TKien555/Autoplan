@@ -1,0 +1,1467 @@
+/* ==========================================================================
+   1. KHUNG CHÍNH & THANH ĐIỀU HƯỚNG TAB
+   ========================================================================== */
+.pu-container {
+  padding: 12px 14px;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+}
+
+.pu-tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--border-default);
+  margin-bottom: 14px;
+  gap: 6px;
+}
+
+.pu-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.pu-tab-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+}
+
+.pu-tab-btn.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background-color: var(--accent-primary-bg);
+}
+
+/* ==========================================================================
+   2. BANNERS THÔNG BÁO (LỖI, THÀNH CÔNG, RAG STATUS)
+   ========================================================================== */
+.pu-error-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--danger-bg);
+  color: var(--danger-hover);
+  border: 1px solid var(--danger-border);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.pu-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--danger-hover);
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.pu-close-btn:hover {
+  background-color: rgba(248, 113, 104, 0.2);
+}
+
+.pu-rag-banner {
+  font-size: 11.5px;
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  border: 1px solid var(--accent-primary-border);
+  padding: 7px 10px;
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+}
+
+.pu-success-banner {
+  margin-top: 10px;
+  padding: 9px 12px;
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ==========================================================================
+   3. BIỂU MẪU, INPUT, TEXTAREA & SELECT
+   ========================================================================== */
+.pu-form-group {
+  margin-bottom: 11px;
+}
+
+.pu-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 5px;
+}
+
+.pu-sub-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.pu-micro-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: block;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.pu-input,
+.pu-textarea,
+.pu-select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pu-textarea {
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.pu-input::placeholder,
+.pu-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.pu-input:focus,
+.pu-textarea:focus,
+.pu-select:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 2px rgba(87, 157, 255, 0.2);
+}
+
+.pu-input.input-error,
+.pu-textarea.input-error {
+  border-color: var(--danger);
+  background-color: rgba(248, 113, 104, 0.06);
+}
+
+/* ==========================================================================
+   4. KHỐI CẤU HÌNH ĐA SPRINT, NHÂN SỰ & RAG TOGGLE
+   ========================================================================== */
+.pu-sprint-config-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent-primary-border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 11px;
+}
+
+.pu-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--accent-primary-hover);
+}
+
+.pu-sprint-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.pu-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pu-sprint-chip {
+  font-size: 10.5px;
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-primary-border);
+}
+
+.pu-team-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  margin-bottom: 11px;
+}
+
+.pu-team-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.pu-member-chip {
+  font-size: 11px;
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+
+.pu-rag-toggle-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.pu-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.pu-checkbox-label input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   5. HỆ THỐNG NÚT BẤM (BUTTONS)
+   ========================================================================== */
+.pu-link-btn {
+  background: none;
+  border: none;
+  color: var(--accent-primary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.pu-link-btn:hover {
+  color: var(--accent-primary-hover);
+  text-decoration: underline;
+}
+
+.pu-primary-btn {
+  background-color: #0c66e4;
+  color: #ffffff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  width: 100%;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.pu-primary-btn:hover:not(:disabled) {
+  background-color: #0055cc;
+}
+
+.pu-primary-btn:disabled {
+  background-color: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border-default);
+  cursor: not-allowed;
+}
+
+.pu-push-btn {
+  background-color: #1f845a;
+  margin-bottom: 0;
+}
+
+.pu-push-btn:hover:not(:disabled) {
+  background-color: var(--success);
+}
+
+.pu-small-btn {
+  border-radius: var(--radius-sm);
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pu-small-btn.primary {
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  border: 1px solid var(--accent-primary-border);
+}
+
+.pu-small-btn.primary:hover {
+  background-color: rgba(87, 157, 255, 0.22);
+}
+
+.pu-small-btn.danger {
+  background-color: var(--danger-bg);
+  color: var(--danger-hover);
+  border: 1px solid var(--danger-border);
+}
+
+.pu-small-btn.danger:hover {
+  background-color: rgba(248, 113, 104, 0.24);
+}
+
+.pu-subtab-btn {
+  flex: 1 1 130px;
+  padding: 7px 8px;
+  font-size: 11px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.pu-subtab-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pu-subtab-btn.active {
+  background-color: var(--accent-primary-bg);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary-hover);
+}
+
+/* ==========================================================================
+   6. DANH SÁCH WBS THEO TỪNG SPRINT & THẺ TASK (INLINE EDITING)
+   ========================================================================== */
+.pu-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  padding: 9px 12px;
+  border-radius: var(--radius-md);
+}
+
+.pu-sprint-bucket {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 10px 12px;
+}
+
+.pu-sprint-bucket-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pu-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.pu-task-card {
+  padding: 10px 11px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease;
+}
+
+.pu-task-card.invalid {
+  border-left-color: var(--danger);
+  border-color: var(--danger-border);
+  background-color: rgba(248, 113, 104, 0.05);
+}
+
+.pu-task-top-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+
+.pu-task-index {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent-primary-hover);
+  background-color: var(--accent-primary-bg);
+  border: 1px solid var(--accent-primary-border);
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.pu-title-input {
+  flex: 1;
+  font-weight: 600;
+}
+
+.pu-hours-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pu-hours-input {
+  width: 58px;
+  font-weight: 700;
+  text-align: right;
+  padding: 5px 6px;
+}
+
+.pu-remove-task-btn {
+  background-color: var(--danger-bg);
+  color: var(--danger-hover);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.pu-remove-task-btn:hover {
+  border-color: var(--danger-border);
+  background-color: rgba(248, 113, 104, 0.25);
+}
+
+.pu-task-meta-grid {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 7px;
+  margin-bottom: 8px;
+}
+
+.pu-task-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pu-assignee-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pu-assignee-select {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--success-border);
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pu-assignee-select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.pu-role-input {
+  width: 135px;
+  padding: 4px 7px;
+  font-size: 11px;
+}
+
+.pu-source-badge {
+  font-size: 10.5px;
+  background-color: var(--purple-bg);
+  color: var(--purple-text);
+  border: 1px solid var(--purple-border);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.pu-field-error {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--danger-hover);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   7. KHUNG ĐẨY TRELLO, QUẢN LÝ TEAM & KHO TÀI LIỆU RAG
+   ========================================================================== */
+.pu-push-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent-primary-border);
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  margin-top: 4px;
+}
+
+.pu-retry-box {
+  margin-top: 10px;
+  padding: 9px 11px;
+  background-color: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-md);
+}
+
+.pu-retry-btn {
+  background-color: #c9372c;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.pu-retry-btn:hover:not(:disabled) {
+  background-color: #ae2e24;
+}
+
+.pu-member-row,
+.pu-doc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 11px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.pu-upload-box {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  padding: 11px 12px;
+  border-radius: var(--radius-md);
+}
+
+.pu-file-input {
+  font-size: 12px;
+  width: 100%;
+  color: var(--text-secondary);
+}
+
+.pu-file-input::file-selector-button {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.pu-file-input::file-selector-button:hover {
+  background-color: var(--bg-hover);
+}
+
+
+/* ==========================================================================
+   10. CHUYỂN ĐỔI CHẾ ĐỘ XEM (VIEW MODE SELECTOR: CARDS / GANTT / HEATMAP)
+   ========================================================================== */
+.pu-view-mode-selector {
+  display: flex;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 3px;
+  gap: 4px;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.pu-view-mode-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+}
+
+.pu-view-mode-btn:hover {
+  color: var(--text-primary);
+  background-color: var(--bg-hover);
+}
+
+.pu-view-mode-btn.active {
+  color: #fff;
+  background-color: var(--accent-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ==========================================================================
+   11. GANTT CHART COMPONENT
+   ========================================================================== */
+.pu-gantt-container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+
+.pu-gantt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pu-gantt-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pu-gantt-badge {
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  border: 1px solid var(--accent-primary-border);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pu-gantt-subinfo {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.pu-gantt-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pu-gantt-select,
+.pu-gantt-search {
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11.5px;
+}
+
+.pu-gantt-search {
+  width: 160px;
+}
+
+.pu-gantt-search:focus,
+.pu-gantt-select:focus {
+  border-color: var(--border-focus);
+  outline: none;
+}
+
+.pu-gantt-zoom-group {
+  display: flex;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.pu-gantt-zoom-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.pu-gantt-zoom-btn.active {
+  background-color: var(--accent-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+.pu-gantt-viewport {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-canvas);
+}
+
+.pu-gantt-layout {
+  display: flex;
+  position: relative;
+}
+
+/* Sidebar bên trái của Gantt */
+.pu-gantt-sidebar {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 2px solid var(--border-default);
+  background-color: var(--bg-surface);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+
+.pu-gantt-sidebar-header {
+  height: 44px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--bg-elevated);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.pu-gantt-sidebar-sprint-title {
+  height: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  background-color: rgba(87, 157, 255, 0.08);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent-primary-hover);
+}
+
+.pu-sprint-count-tag {
+  font-size: 10px;
+  background-color: var(--bg-elevated);
+  padding: 1px 6px;
+  border-radius: 10px;
+  color: var(--text-muted);
+}
+
+.pu-gantt-sidebar-row {
+  height: 34px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+  gap: 8px;
+}
+
+.pu-gantt-sidebar-row:hover {
+  background-color: var(--bg-hover);
+}
+
+.pu-gantt-task-name-col {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pu-gantt-task-idx {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.pu-gantt-task-title-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-primary);
+}
+
+.pu-gantt-task-hours-col {
+  flex-shrink: 0;
+}
+
+.pu-gantt-hours-badge {
+  background-color: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+}
+
+/* Timeline bên phải của Gantt */
+.pu-gantt-timeline-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.pu-gantt-timeline-header {
+  height: 44px;
+  display: flex;
+  border-bottom: 1px solid var(--border-default);
+  background-color: var(--bg-elevated);
+}
+
+.pu-gantt-day-col-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border-subtle);
+  font-size: 10px;
+  user-select: none;
+}
+
+.pu-gantt-day-col-header.weekend {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.pu-gantt-day-col-header.today {
+  background-color: rgba(87, 157, 255, 0.15);
+}
+
+.pu-gantt-day-num {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pu-gantt-day-name {
+  color: var(--text-muted);
+  font-size: 9px;
+}
+
+.pu-gantt-bars-container {
+  position: relative;
+  flex: 1;
+}
+
+.pu-gantt-grid-lines {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.pu-gantt-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pu-gantt-grid-line.weekend {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.pu-gantt-today-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: var(--accent-primary);
+  z-index: 5;
+  box-shadow: 0 0 8px rgba(87, 157, 255, 0.6);
+}
+
+.pu-gantt-today-tag {
+  position: absolute;
+  top: 2px;
+  left: -20px;
+  background-color: var(--accent-primary);
+  color: #fff;
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.pu-gantt-sprint-timeline-spacer {
+  height: 28px;
+  background-color: rgba(87, 157, 255, 0.03);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.pu-gantt-bar-row {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.pu-gantt-bar-wrapper {
+  position: absolute;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  cursor: pointer;
+  z-index: 2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pu-gantt-bar-wrapper:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  z-index: 6;
+}
+
+.pu-gantt-bar-wrapper.long-task {
+  border-left: 4px solid #ff7b72;
+}
+
+.pu-gantt-bar-title {
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pu-gantt-bar-assignee {
+  font-size: 10px;
+  opacity: 0.9;
+  flex-shrink: 0;
+}
+
+/* Tooltip chi tiết khi rê chuột */
+.pu-gantt-tooltip {
+  position: fixed;
+  width: 300px;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  padding: 10px 12px;
+  z-index: 1000;
+  pointer-events: none;
+  font-size: 11.5px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.pu-gantt-tooltip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 6px;
+}
+
+.pu-gantt-tooltip-badge {
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+.pu-gantt-tooltip-meta div {
+  margin-bottom: 3px;
+  color: var(--text-secondary);
+}
+
+.pu-gantt-tooltip-meta strong {
+  color: var(--text-primary);
+}
+
+.pu-gantt-tooltip-dod {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border-subtle);
+}
+
+.pu-gantt-tooltip-dod ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+}
+
+/* Chú thích Legend */
+.pu-gantt-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.pu-gantt-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pu-gantt-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+.pu-gantt-legend-swatch.today-line {
+  width: 3px;
+  background-color: var(--accent-primary);
+}
+
+.pu-gantt-legend-swatch.weekend-box {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* ==========================================================================
+   12. WORKLOAD HEATMAP COMPONENT
+   ========================================================================== */
+.pu-heatmap-container {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pu-heatmap-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.pu-heatmap-stat-box {
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pu-stat-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pu-stat-value {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.pu-stat-sub {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.pu-heatmap-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-canvas);
+}
+
+.pu-heatmap-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pu-heatmap-table th {
+  background-color: var(--bg-elevated);
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 2px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: 11.5px;
+}
+
+.pu-th-sprint {
+  text-align: center !important;
+  min-width: 110px;
+}
+
+.pu-th-sprint-title {
+  display: block;
+  font-weight: 700;
+  color: var(--accent-primary-hover);
+}
+
+.pu-th-sprint-sub {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.pu-th-total,
+.pu-th-eval {
+  text-align: center !important;
+  min-width: 90px;
+}
+
+.pu-heatmap-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.pu-td-member {
+  min-width: 180px;
+}
+
+.pu-member-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pu-member-avatar-circle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--accent-primary-bg);
+  color: var(--accent-primary-hover);
+  border: 1px solid var(--accent-primary-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pu-member-name {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pu-member-role {
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* Các thang màu Heatmap Cell */
+.pu-td-heatmap-cell {
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+
+.pu-td-heatmap-cell:hover {
+  filter: brightness(1.15);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
+.pu-heatmap-cell-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.pu-heatmap-hours {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.pu-heatmap-tag {
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+/* Màu thang nhiệt */
+.cell-starved {
+  background-color: rgba(115, 132, 150, 0.12);
+  color: var(--text-muted);
+  border: 1px dashed rgba(115, 132, 150, 0.3);
+}
+
+.cell-light {
+  background-color: rgba(56, 139, 253, 0.12);
+  color: #79c0ff;
+}
+
+.cell-optimal {
+  background-color: rgba(46, 160, 67, 0.22);
+  color: #7ee787;
+  border: 1px solid rgba(46, 160, 67, 0.4);
+}
+
+.cell-moderate {
+  background-color: rgba(210, 153, 34, 0.22);
+  color: #e3b341;
+}
+
+.cell-overloaded {
+  background-color: rgba(248, 113, 104, 0.25);
+  color: #ff7b72;
+  border: 1px solid rgba(248, 113, 104, 0.5);
+  animation: pulse-overload 2s infinite ease-in-out;
+}
+
+@keyframes pulse-overload {
+  0% { box-shadow: inset 0 0 0 1px rgba(248, 113, 104, 0.4); }
+  50% { box-shadow: inset 0 0 8px rgba(248, 113, 104, 0.6); }
+  100% { box-shadow: inset 0 0 0 1px rgba(248, 113, 104, 0.4); }
+}
+
+.pu-td-total {
+  text-align: center;
+}
+
+.pu-avg-label {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.pu-td-eval {
+  text-align: center;
+}
+
+.pu-eval-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.pu-eval-tag.success {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+  border: 1px solid var(--success-border);
+}
+
+.pu-eval-tag.warning {
+  background-color: rgba(210, 153, 34, 0.15);
+  color: #e3b341;
+  border: 1px solid rgba(210, 153, 34, 0.35);
+}
+
+.pu-eval-tag.danger {
+  background-color: var(--danger-bg);
+  color: var(--danger-hover);
+  border: 1px solid var(--danger-border);
+}
+
+/* Footer tổng kết */
+.pu-tr-footer td {
+  background-color: var(--bg-elevated);
+  border-top: 2px solid var(--border-default);
+  font-weight: 700;
+}
+
+.pu-td-footer-sprint {
+  text-align: center;
+}
+
+.pu-footer-sub {
+  display: block;
+  font-size: 9.5px;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+/* Legend Heatmap */
+.pu-heatmap-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.pu-legend-title {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pu-legend-box {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Modal chi tiết Cell */
+.pu-heatmap-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.pu-heatmap-modal {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pu-heatmap-modal-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: var(--bg-elevated);
+}
+
+.pu-heatmap-modal-body {
+  padding: 12px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pu-modal-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pu-modal-task-item {
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+.pu-modal-task-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pu-modal-task-title {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.pu-modal-task-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 4px 0 6px 0;
+  line-height: 1.35;
+}
+
+.pu-modal-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.pu-modal-cat-badge {
+  background-color: var(--bg-elevated);
+  color: var(--accent-primary-hover);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.pu-heatmap-modal-footer {
+  padding: 8px 16px;
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  justify-content: flex-end;
+  background-color: var(--bg-elevated);
+}

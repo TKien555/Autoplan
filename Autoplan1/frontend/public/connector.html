@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <!-- Thêm dòng này để sửa lỗi Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Thư viện bắt buộc của Trello -->
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+</head>
+
+<body>
+    <script>
+        window.TrelloPowerUp.initialize({
+            // Hien thi ung dung truc tiep o mat sau the
+            'card-back-section': function (t, options) {
+                return {
+                    title: 'AI Planner & RAG (WBS)',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/4712/4712035.png',
+                    content: {
+                        type: 'iframe',
+                        url: t.signUrl('./?view=app'),
+                        height: 350
+                    }
+                };
+            },
+            // Cấu hình hiển thị 1 nút bấm (Card button) bên trong thẻ Trello
+            'card-buttons': function (t, options) {
+                return [{
+                    icon: 'https://cdn.glitch.com/1b42d7ef-2d83-458b-9e2d-5ce2cc16315c%2Ficon.svg', // Icon mặc định
+                    text: 'AI Lập Kế Hoạch',
+                    callback: function (t) {
+                        // Khi bấm nút, Trello sẽ mở giao diện ReactJS (index.html) dưới dạng popup
+                        return t.popup({
+                            title: 'Phân rã công việc bằng GenAI',
+                            url: t.signUrl('./?view=app'),
+                            height: 500
+                        });
+                    }
+                }];
+            }
+        });
+    </script>
+</body>
+
+</html>

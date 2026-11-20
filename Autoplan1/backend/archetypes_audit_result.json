@@ -1,0 +1,1375 @@
+[
+  {
+    "typeId": "ARCH_2_BROWNFIELD",
+    "name": "Dạng 2: Brownfield / Mở rộng Tính năng (E-Commerce BNPL & Loyalty)",
+    "taskCount": 18,
+    "durationMs": 15297,
+    "tasks": [
+      {
+        "title": "Impact Analysis & Legacy API Versioning Setup",
+        "category": "Architecture",
+        "description": "Analyze impact on existing checkout flow and set up API v2 framework while keeping v1 fully functional.",
+        "acceptanceCriteria": [
+          "Impact analysis document approved by tech leads",
+          "API v2 routing framework established without breaking v1 endpoints"
+        ],
+        "edgeCases": [
+          "Legacy client calling v2 with old payload format",
+          "Network timeout between microservices during version routing"
+        ],
+        "deliverables": "Impact Analysis Report & API v2 Base Routing",
+        "role": "Solution Architect / Tech Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 32,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Backend BNPL & Loyalty DB Schema Design",
+        "category": "Backend",
+        "description": "Design database migrations, entities, and repositories for BNPL integration and Loyalty points ledger.",
+        "acceptanceCriteria": [
+          "DB migration scripts tested and rollback-safe",
+          "Indexes created for high-performance points and installment queries"
+        ],
+        "edgeCases": [
+          "Concurrent ledger updates for loyalty points causing deadlocks",
+          "Large transaction history table locking during migration"
+        ],
+        "deliverables": "Database Migration Scripts & ERD Documentation",
+        "role": "Senior Backend Developer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 40,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Web Checkout v2 UI Component Foundation",
+        "category": "Frontend",
+        "description": "Develop modular React components for BNPL payment selection and loyalty points redemption in checkout.",
+        "acceptanceCriteria": [
+          "Components support dynamic rendering based on Feature Flag status",
+          "Responsive layout verified across desktop and tablet viewports"
+        ],
+        "edgeCases": [
+          "User toggles loyalty redemption while network request is pending",
+          "Expired token during component re-hydration"
+        ],
+        "deliverables": "React Component Library for BNPL & Loyalty",
+        "role": "Frontend React Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 38,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Mobile BNPL & Loyalty UI Architecture",
+        "category": "Mobile",
+        "description": "Implement Flutter state management and UI screens for BNPL gateway selection and loyalty dashboard.",
+        "acceptanceCriteria": [
+          "Flutter bloc/provider successfully handles offline/online state transitions",
+          "UI matches design system guidelines for both iOS and Android"
+        ],
+        "edgeCases": [
+          "App backgrounded during active BNPL WebView payment redirect",
+          "Low memory crash on older Android devices during points animation"
+        ],
+        "deliverables": "Flutter BNPL & Loyalty Module codebase",
+        "role": "Mobile Flutter Developer",
+        "assigneeName": "Vũ Hoàng Long",
+        "estimatedHours": 36,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Regression Test Planning & Automation Framework Setup",
+        "category": "QA",
+        "description": "Prepare comprehensive test plan for regression of existing checkout and automated test skeletons for v2 APIs.",
+        "acceptanceCriteria": [
+          "Test plan covers 100% of legacy checkout edge cases",
+          "Automation framework initialized with baseline smoke tests"
+        ],
+        "edgeCases": [
+          "Test environment data inconsistency with production snapshots",
+          "Flaky test scripts due to asynchronous payment callbacks"
+        ],
+        "deliverables": "Master Test Plan & Automation Base Repository",
+        "role": "QA / Regression & Automation Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "LaunchDarkly & CI/CD Pipeline Configuration",
+        "category": "DevOps",
+        "description": "Setup LaunchDarkly Feature Flag environments (v1/v2 rollout) and integrate automated build/deploy pipelines.",
+        "acceptanceCriteria": [
+          "Feature flags configured for 5%, 25%, and 100% targeted rollouts",
+          "CI/CD pipeline successfully builds and deploys to staging environment"
+        ],
+        "edgeCases": [
+          "LaunchDarkly SDK connection failure falling back to default configuration",
+          "Pipeline failure due to concurrent deployments"
+        ],
+        "deliverables": "Configured Feature Flags & CI/CD Staging Pipeline",
+        "role": "DevOps / Release Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Architecture Review & Feature Flag v1/v2 Governance",
+        "category": "Architecture",
+        "description": "Review implementation code against architecture guidelines and establish feature flag toggle governance policies.",
+        "acceptanceCriteria": [
+          "Code review sign-off for all backend and client PRs",
+          "Feature flag cleanup strategy documented"
+        ],
+        "edgeCases": [
+          "Orphaned feature flags remaining in codebase after full rollout",
+          "Cross-service dependency mismatch during flag evaluation"
+        ],
+        "deliverables": "Architecture Audit Sign-off & Flag Governance Policy",
+        "role": "Solution Architect / Tech Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 30,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Backend BNPL Gateway Integration & Loyalty Engine",
+        "category": "Backend",
+        "description": "Implement integration services for Fundiin and Kredivo APIs alongside core loyalty point earning/burning logic.",
+        "acceptanceCriteria": [
+          "Successful end-to-end payment creation and webhook handling for BNPL",
+          "Loyalty points correctly calculated, credited, and debited with ACID compliance"
+        ],
+        "edgeCases": [
+          "Payment gateway webhook received before order is committed in DB",
+          "Duplicate webhook retries triggering double points issuance"
+        ],
+        "deliverables": "BNPL & Loyalty Service APIs",
+        "role": "Senior Backend Developer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 42,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Web Checkout v2 Integration with BNPL & Loyalty",
+        "category": "Frontend",
+        "description": "Integrate React checkout flow with new backend APIs for BNPL payment selection and loyalty points discount application.",
+        "acceptanceCriteria": [
+          "Seamless switching between traditional payment methods and BNPL",
+          "Real-time calculation of loyalty points discount reflected in order summary"
+        ],
+        "edgeCases": [
+          "User session expires mid-payment inside BNPL iframe/redirect",
+          "Insufficient loyalty points selected throwing validation error"
+        ],
+        "deliverables": "Fully Integrated Web Checkout v2 Module",
+        "role": "Frontend React Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Mobile BNPL Gateway & Loyalty Checkout Flow",
+        "category": "Mobile",
+        "description": "Integrate Flutter mobile checkout with Fundiin/Kredivo SDKs and loyalty reward redemption screens.",
+        "acceptanceCriteria": [
+          "Successful native/WebView handling of BNPL authentication and approval",
+          "Loyalty balance and redemption options correctly displayed in mobile checkout"
+        ],
+        "edgeCases": [
+          "User cancels payment on third-party BNPL app and returns to cart",
+          "Poor network connectivity causing timeout during points redemption call"
+        ],
+        "deliverables": "Integrated Mobile Checkout & Loyalty App Build",
+        "role": "Mobile Flutter Developer",
+        "assigneeName": "Vũ Hoàng Long",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Full Regression Testing & Automated Test Execution",
+        "category": "QA",
+        "description": "Execute full regression testing suite across legacy checkout flows and new BNPL/Loyalty features on web and mobile.",
+        "acceptanceCriteria": [
+          "100% pass rate for legacy checkout regression test cases",
+          "Zero critical defects found in BNPL and loyalty integration flows"
+        ],
+        "edgeCases": [
+          "Edge cases with partial refunds affecting loyalty point calculations",
+          "Browser compatibility issues on Safari for BNPL popup windows"
+        ],
+        "deliverables": "Regression Test Report & Automated Test Execution Logs",
+        "role": "QA / Regression & Automation Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 38,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Load Testing & Monitoring Dashboard Setup",
+        "category": "DevOps",
+        "description": "Perform load testing for 1M DAU peak traffic simulation on checkout v2 and configure Prometheus/Grafana alerts.",
+        "acceptanceCriteria": [
+          "System handles simulated peak traffic with API response time < 500ms",
+          "Monitoring alerts configured for payment gateway errors and high latency"
+        ],
+        "edgeCases": [
+          "Database connection pool exhaustion under sudden traffic spike",
+          "Third-party BNPL API rate limiting during load test"
+        ],
+        "deliverables": "Load Test Report & Grafana Monitoring Dashboard",
+        "role": "DevOps / Release Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 38,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Production Rollout Strategy & UAT Governance",
+        "category": "Architecture",
+        "description": "Oversee UAT sign-off and define gradual feature flag rollout plan (5% -> 25% -> 100%) for production release.",
+        "acceptanceCriteria": [
+          "UAT sign-off obtained from business stakeholders",
+          "Rollout schedule and rollback criteria formally documented"
+        ],
+        "edgeCases": [
+          "Unexpected anomaly detected during 5% rollout requiring immediate rollback",
+          "Stakeholder dispute on loyalty point conversion rate during UAT"
+        ],
+        "deliverables": "Production Rollout Plan & UAT Sign-off Document",
+        "role": "Solution Architect / Tech Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Production Deployment & Hotfix Support",
+        "category": "Backend",
+        "description": "Support production release, monitor ledger integrity, and implement rapid hotfixes if anomalies arise during rollout.",
+        "acceptanceCriteria": [
+          "Successful database migration and service deployment on production",
+          "Zero data corruption or balance mismatch during gradual rollout"
+        ],
+        "edgeCases": [
+          "Data discrepancy discovered between internal ledger and third-party BNPL ledger",
+          "High volume of concurrent transactions locking loyalty tables"
+        ],
+        "deliverables": "Production Deployment Verification Report",
+        "role": "Senior Backend Developer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Web Production Monitoring & Post-Launch Polish",
+        "category": "Frontend",
+        "description": "Monitor web frontend error tracking (Sentry) and resolve any UI/UX issues reported during 5% to 100% rollout.",
+        "acceptanceCriteria": [
+          "Zero unhandled JavaScript exceptions related to checkout v2 in Sentry",
+          "UI adjustments completed based on initial user feedback"
+        ],
+        "edgeCases": [
+          "Browser cache serving old static assets after deployment",
+          "Third-party script blocker interfering with BNPL payment widget"
+        ],
+        "deliverables": "Web Production Stability Report",
+        "role": "Frontend React Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 32,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Mobile Production Monitoring & Store Hotfix Support",
+        "category": "Mobile",
+        "description": "Monitor mobile app crashlytics and crash reports during phased rollout, preparing hotfix builds if necessary.",
+        "acceptanceCriteria": [
+          "Crash-free sessions rate > 99.5% for mobile checkout flow",
+          "Hotfix patches submitted and approved by app stores swiftly if needed"
+        ],
+        "edgeCases": [
+          "App store review delay for emergency hotfix update",
+          "OS-specific rendering bug on older iOS versions during BNPL redirect"
+        ],
+        "deliverables": "Mobile Production Release & Stability Log",
+        "role": "Mobile Flutter Developer",
+        "assigneeName": "Vũ Hoàng Long",
+        "estimatedHours": 32,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Final Acceptance Audit & Production Smoke Testing",
+        "category": "QA",
+        "description": "Conduct final production smoke testing across all flag percentages and verify backward compatibility for legacy clients.",
+        "acceptanceCriteria": [
+          "Production smoke test suite passes 100%",
+          "Legacy client API v1 verification confirms zero regression"
+        ],
+        "edgeCases": [
+          "CDN caching stale API responses during production smoke test",
+          "Regional DNS propagation delay affecting rollout verification"
+        ],
+        "deliverables": "Final QA Acceptance Audit Report",
+        "role": "QA / Regression & Automation Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Operations Handover & Runbook Documentation",
+        "category": "DevOps",
+        "description": "Finalize operational runbooks, disaster recovery procedures, and incident response protocols for BNPL and Loyalty.",
+        "acceptanceCriteria": [
+          "Operations runbook reviewed and approved by support team",
+          "Incident escalation matrix and alerting thresholds fully established"
+        ],
+        "edgeCases": [
+          "Complete outage of Fundiin/Kredivo API requiring emergency fallback toggle",
+          "Database failover triggering split-brain scenario in loyalty ledger"
+        ],
+        "deliverables": "Operations Runbook & Incident Response Guide",
+        "role": "DevOps / Release Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      }
+    ]
+  },
+  {
+    "typeId": "ARCH_4_SRE_FINOPS",
+    "name": "Dạng 4: Tối ưu Hạ tầng, Hiệu năng SRE & FinOps (AWS High Load & Cost Down)",
+    "taskCount": 12,
+    "durationMs": 12640,
+    "tasks": [
+      {
+        "title": "Profiling hệ thống & Triển khai OpenTelemetry",
+        "category": "SRE Observability",
+        "description": "Cài đặt và cấu hình OpenTelemetry distributed tracing cho toàn bộ microservices để định vị các điểm nghẽn hiệu năng.",
+        "acceptanceCriteria": [
+          "Thu thập 100% trace request từ API Gateway đến Database",
+          "Xác định chính xác các slow query và external API call chiếm >100ms",
+          "Tích hợp telemetry data thành công vào hệ thống trung tâm"
+        ],
+        "edgeCases": [
+          "Mất mát trace data khi mạng gián đoạn",
+          "Quá tải collector khi lượng request đạt 10,000 req/s"
+        ],
+        "deliverables": "OpenTelemetry SDK Integration Report & Architecture Diagram",
+        "role": "Lead DevOps / Cloud SRE",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 40,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Phân tích Profiling Database & Thiết kế Index",
+        "category": "Database Performance",
+        "description": "Thực hiện query profiling trên Production DB, phân tích execution plan và thiết kế bổ sung composite index cho các bảng cốt lõi.",
+        "acceptanceCriteria": [
+          "Giảm thời gian thực thi của top 20 query chậm nhất xuống dưới 50ms",
+          "Xây dựng xong script tạo index không gây downtime"
+        ],
+        "edgeCases": [
+          "Index quá nhiều làm chậm thao tác Write",
+          "Xung đột lock bảng khi tạo index lớn trong giờ cao điểm"
+        ],
+        "deliverables": "Database Profiling Report & SQL Index Migration Scripts",
+        "role": "Senior Database & Backend Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Audit AWS Resource & Lập kế hoạch FinOps Cost Down",
+        "category": "FinOps Cloud Cost",
+        "description": "Sử dụng AWS Cost Explorer và Trusted Advisor để rà soát toàn bộ tài nguyên, xác định các Orphaned EBS, Snapshots và EC2 lãng phí.",
+        "acceptanceCriteria": [
+          "Xác định được danh sách tài nguyên mồ côi cần dọn dẹp",
+          "Lập mô hình dự phóng tiết kiệm chi phí đạt mục tiêu giảm 30%"
+        ],
+        "edgeCases": [
+          "Xóa nhầm snapshot backup quan trọng do gán nhãn sai",
+          "Cam kết Savings Plans quá mức nhu cầu thực tế"
+        ],
+        "deliverables": "AWS Cost Audit Report & FinOps Action Plan",
+        "role": "Cloud Infrastructure & FinOps Engineer",
+        "assigneeName": "Hoàng Văn Đức",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Thiết lập môi trường Load Test & Baseline Performance",
+        "category": "Performance Testing",
+        "description": "Xây dựng kịch bản kiểm thử tải mô phỏng 10,000 req/s bằng k6, đo lường các chỉ số baseline hiện tại của hệ thống.",
+        "acceptanceCriteria": [
+          "Kịch bản test mô phỏng chính xác hành vi người dùng Black Friday",
+          "Xác định rõ ràng thông số P99 hiện tại (1.8s) trên môi trường Staging"
+        ],
+        "edgeCases": [
+          "Máy tạo tải (Load generator) bị nghẽn cổ chai trước hệ thống đích",
+          "Dữ liệu test không đồng nhất với Production"
+        ],
+        "deliverables": "Performance Baseline Test Report & k6 Script Suite",
+        "role": "QA / Performance & Stress Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Cấu hình Prometheus, Grafana & Setup Prometheus Alerting",
+        "category": "SRE Observability",
+        "description": "Triển khai Prometheus và Grafana dashboards chuyên sâu để giám sát CPU, Memory, Network, và P99 Latency theo thời gian thực.",
+        "acceptanceCriteria": [
+          "Dashboards hiển thị đầy đủ các golden signals (Latency, Traffic, Errors, Saturation)",
+          "Cấu hình alert qua Slack/PagerDuty khi P99 vượt ngưỡng 120ms"
+        ],
+        "edgeCases": [
+          "Prometheus Storage bị đầy do giữ retention quá lâu",
+          "Bão alert (Alert storm) khi hệ thống biến động nhẹ"
+        ],
+        "deliverables": "Grafana Dashboards & Prometheus Alert Rules Configuration",
+        "role": "Lead DevOps / Cloud SRE",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 35,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Tích hợp Redis Enterprise Cache & Tối ưu Query Implementation",
+        "category": "Database Performance",
+        "description": "Áp dụng chiến lược Cache-aside kết hợp Write-through với Redis Enterprise, đồng thời cập nhật ORM query trên Backend.",
+        "acceptanceCriteria": [
+          "Tỷ lệ Cache Hit Rate đạt tối thiểu 85%",
+          "Truy vấn dữ liệu nóng được đáp ứng hoàn toàn từ Redis dưới 10ms"
+        ],
+        "edgeCases": [
+          "Cache stampede khi key hết hạn đồng loạt",
+          "Cache inconsistency khi dữ liệu Database update nhưng Redis chưa kịp refresh"
+        ],
+        "deliverables": "Redis Cache Integration Code & Updated Backend Services",
+        "role": "Nguyễn Minh Khôi",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Thực thi FinOps: Chuyển đổi Spot Instances & Dọn dẹp Tài nguyên",
+        "category": "FinOps Cloud Cost",
+        "description": "Thực hiện xóa Orphaned EBS/Snapshots, chuyển đổi EC2 On-Demand sang Spot/Savings Plans và tối ưu CloudWatch log retention.",
+        "acceptanceCriteria": [
+          "Giảm chi phí AWS tổng thể đạt hoặc vượt mức 30% (từ $45,000 xuống dưới $31,500)",
+          "Không ảnh hưởng đến tính HA và uptime của hệ thống"
+        ],
+        "edgeCases": [
+          "Spot instance bị terminate đột ngột trong giờ cao điểm",
+          "Thiếu hụt capacity của Spot pool ở region hiện tại"
+        ],
+        "deliverables": "AWS Cost Reduction Execution Report & Updated Billing Dashboard",
+        "role": "Cloud Infrastructure & FinOps Engineer",
+        "assigneeName": "Hoàng Văn Đức",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Kiểm thử tải cường độ cao & Stress Testing 10,000 req/s",
+        "category": "Performance Testing",
+        "description": "Chạy kiểm thử tải hệ thống ở mức 10,000 req/s sau khi tích hợp Redis và Database Index, đo lường độ trễ P99.",
+        "acceptanceCriteria": [
+          "Độ trễ P99 giảm từ 1.8s xuống dưới 120ms tại mức tải 10,000 req/s",
+          "Tỷ lệ lỗi (Error rate) dưới 0.01%"
+        ],
+        "edgeCases": [
+          "Hệ thống sập nguồn đột ngột khi đạt 8,000 req/s do giới hạn connection pool",
+          "Memory leak xuất hiện sau 2 giờ test liên tục"
+        ],
+        "deliverables": "Stress Test Validation Report & P99 Benchmark Certificate",
+        "role": "QA / Performance & Stress Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 35,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Go-Live Production Deployment & SRE Runbook",
+        "category": "SRE Observability",
+        "description": "Triển khai toàn bộ cấu hình SRE, Redis, và Database optimizations lên Production, đồng thời bàn giao sổ tay vận hành (Runbook).",
+        "acceptanceCriteria": [
+          "Deployment thành công không downtime trên Production",
+          "Hoàn thiện tài liệu Incident Response và Runbook cho đội ngũ Ops"
+        ],
+        "edgeCases": [
+          "Rollback khẩn cấp nếu phát sinh lỗi không lường trước sau khi release",
+          "Cấu hình mạng production khác biệt so với Staging"
+        ],
+        "deliverables": "Production Deployment Sign-off & SRE Operations Runbook",
+        "role": "Lead DevOps / Cloud SRE",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Tinh chỉnh Database cuối cùng & Audit Code Performance",
+        "category": "Database Performance",
+        "description": "Review toàn bộ codebase backend lần cuối, tinh chỉnh connection pool và xử lý các điểm nghẽn tiềm ẩn phát sinh trong quá trình stress test.",
+        "acceptanceCriteria": [
+          "Connection pool hoạt động ổn định dưới tải cao không bị leak",
+          "Hoàn tất bàn giao tài liệu tối ưu hóa database"
+        ],
+        "edgeCases": [
+          "Deadlock phát sinh khi concurrency tăng đột biến",
+          "Lỗi cấu hình max connection từ phía AWS RDS"
+        ],
+        "deliverables": "Final DB Optimization & Code Audit Sign-off",
+        "role": "Senior Database & Backend Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Thiết lập AWS Budgets & FinOps Governance Policy",
+        "category": "FinOps Cloud Cost",
+        "description": "Cài đặt AWS Budgets, Cost Anomaly Detection và thiết lập chính sách tự động hóa quản trị chi phí Cloud lâu dài cho tổ chức.",
+        "acceptanceCriteria": [
+          "Thiết lập cảnh báo tự động khi chi phí vượt ngưỡng định mức 5%",
+          "Bàn giao tài liệu quản trị FinOps cho bộ phận tài chính và kỹ thuật"
+        ],
+        "edgeCases": [
+          "Báo cáo chi phí bị trễ dữ liệu từ AWS Billing API",
+          "Phát sinh tài nguyên mới không nằm trong governance policy"
+        ],
+        "deliverables": "AWS Budgets Setup & FinOps Governance Policy Documentation",
+        "role": "Cloud Infrastructure & FinOps Engineer",
+        "assigneeName": "Hoàng Văn Đức",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Nghiệm thu UAT, Đánh giá FinOps & Ký biên bản hoàn thành",
+        "category": "Performance Testing",
+        "description": "Thực hiện kiểm tra nghiệm thu tổng thể (UAT), xác thực hiệu năng P99 < 120ms và kiểm chứng mức giảm 30% chi phí AWS trên Production.",
+        "acceptanceCriteria": [
+          "Đạt 100% tiêu chí nghiệm thu: P99 < 120ms, tải 10,000 req/s, chi phí giảm 30%",
+          "Được phê duyệt ký biên bản nghiệm thu từ các bên liên quan"
+        ],
+        "edgeCases": [
+          "Stakeholder yêu cầu test bổ sung các kịch bản ngoại lệ mới",
+          "Chênh lệch số liệu chi phí giữa hóa đơn thực tế và ước tính"
+        ],
+        "deliverables": "UAT Sign-off Certificate & Final Project Performance Report",
+        "role": "QA / Performance & Stress Tester",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      }
+    ]
+  },
+  {
+    "typeId": "ARCH_5_SECURITY",
+    "name": "Dạng 5: Bảo mật & Tuân thủ Tiêu chuẩn (PCI-DSS Level 1 & SOC 2 Type II)",
+    "taskCount": 12,
+    "durationMs": 12469,
+    "tasks": [
+      {
+        "title": "Kế hoạch và Đánh giá Gap Analysis cho PCI-DSS & SOC 2",
+        "category": "Compliance & Security",
+        "description": "Thực hiện phân tích độ lệch (Gap Analysis) toàn diện cho các yêu cầu PCI-DSS v4.0 và SOC 2 Type II, xây dựng khung quản trị rủi ro.",
+        "acceptanceCriteria": [
+          "Hoàn thành bảng đánh giá 100% các điều khoản PCI-DSS và SOC 2",
+          "Xác định tối thiểu 15 điểm rủi ro và thiếu sót lớn cần khắc phục"
+        ],
+        "edgeCases": [
+          "Thiếu tài liệu hệ thống cũ từ các bộ phận khác",
+          "Sự khác biệt trong định nghĩa dữ liệu PII giữa các phòng ban"
+        ],
+        "deliverables": "Compliance Gap Assessment Report & Risk Mitigation Roadmap",
+        "role": "Chief Information Security Officer (CISO) / Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Thiết kế Chính sách Kiểm toán và Nhật ký Immutable SIEM",
+        "category": "Audit & Governance",
+        "description": "Xây dựng chính sách kiểm toán bảo mật và thiết kế kiến trúc thu thập log bất biến (Immutable Audit Logs) không thể chỉnh sửa cho toàn hệ thống.",
+        "acceptanceCriteria": [
+          "Tài liệu thiết kế kiến trúc SIEM đạt chuẩn SOC 2 Trust Services Criteria",
+          "Chính sách lưu trữ log tối thiểu 365 ngày được phê duyệt"
+        ],
+        "edgeCases": [
+          "Dung lượng lưu trữ log tăng đột biến gây tràn bộ nhớ",
+          "Quyền truy cập log bị vượt quyền (Privilege Escalation)"
+        ],
+        "deliverables": "SIEM Architecture & Security Policy Document",
+        "role": "Security & Compliance Auditor",
+        "assigneeName": "Vũ Thị Mai",
+        "estimatedHours": 30,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Thiết lập Hạ tầng AWS KMS Envelope Encryption và Secret Manager",
+        "category": "Cloud Security & DevSecOps",
+        "description": "Cấu hình AWS KMS Envelope Encryption và tích hợp tự động hóa Secret Rotation định kỳ 30 ngày cho các thông tin xác thực nhạy cảm.",
+        "acceptanceCriteria": [
+          "KMS Customer Managed Keys được tạo và phân quyền IAM chặt chẽ",
+          "Automation script xoay vòng secret thành công trong môi trường thử nghiệm"
+        ],
+        "edgeCases": [
+          "Lỗi kết nối API AWS KMS trong giờ cao điểm",
+          "Ứng dụng mất kết nối DB do secret bị đổi nhưng chưa reload cấu hình"
+        ],
+        "deliverables": "AWS KMS Setup Scripts & Secret Rotation Automation Pipeline",
+        "role": "DevSecOps Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 40,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Đánh giá và Vá 100% Lỗ hổng CVE High/Critical Backend",
+        "category": "Vulnerability Management",
+        "description": "Quét mã nguồn và hạ tầng ứng dụng backend, phát hiện và vá triệt để 100% các lỗ hổng bảo mật mức High và Critical theo chuẩn CVE.",
+        "acceptanceCriteria": [
+          "Báo cáo quét lỗ hổng SCA/SAST không còn cảnh báo mức High hoặc Critical",
+          "Tất cả dependency được nâng cấp lên bản vá mới nhất"
+        ],
+        "edgeCases": [
+          "Thư viện bên thứ ba cũ không còn được hỗ trợ bản vá",
+          "Xung đột phiên bản thư viện gây lỗi biên dịch mã nguồn"
+        ],
+        "deliverables": "Backend Security Vulnerability Remediation Report",
+        "role": "Senior Backend Security Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 38,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Triển khai Mã hóa Dữ liệu At-rest AES-256 & TLS 1.3",
+        "category": "Data Security",
+        "description": "Áp dụng mã hóa toàn bộ dữ liệu nhạy cảm PAN, PII ở trạng thái lưu trữ (At-rest AES-256) và ép buộc truyền tải qua TLS 1.3 trên toàn hệ thống.",
+        "acceptanceCriteria": [
+          "100% cột chứa dữ liệu nhạy cảm trong Database được mã hóa AES-256",
+          "Cấu hình SSL/TLS đạt điểm A+ trên SSL Labs, chỉ cho phép TLS 1.3"
+        ],
+        "edgeCases": [
+          "Query tìm kiếm trên dữ liệu đã mã hóa bị chậm",
+          "Client cũ không hỗ trợ TLS 1.3 gây lỗi kết nối"
+        ],
+        "deliverables": "Data Encryption Implementation Module & TLS 1.3 Config",
+        "role": "Senior Backend Security Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 42,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Tích hợp và Cấu hình Hệ thống SIEM (Splunk/Wazuh)",
+        "category": "Security Monitoring",
+        "description": "Triển khai hệ thống SIEM thu thập log tập trung, thiết lập cơ chế Write-Once-Read-Many (WORM) đảm bảo tính bất biến của nhật ký kiểm toán.",
+        "acceptanceCriteria": [
+          "Log từ tất cả các node ứng dụng, database và IAM được đẩy về SIEM thời gian thực",
+          "Thử nghiệm tấn công chỉnh sửa log file bị hệ thống chặn và phát cảnh báo ngay lập tức"
+        ],
+        "edgeCases": [
+          "Nghẽn mạng khi lượng log gửi về SIEM vượt quá băng thông",
+          "Định dạng log không đồng chuẩn giữa các microservices"
+        ],
+        "deliverables": "Immutable SIEM Dashboard & Log Collection Pipelines",
+        "role": "DevSecOps Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Kiểm tra Tuân thủ Kiểm soát Nội bộ và Thu thập Bằng chứng",
+        "category": "Audit & Compliance",
+        "description": "Thu thập bằng chứng kiểm soát kỹ thuật và quy trình để chuẩn bị cho đơn vị kiểm toán độc lập đánh giá PCI-DSS và SOC 2.",
+        "acceptanceCriteria": [
+          "Hoàn thiện 100% các artifact chứng minh cho các tiêu chí SOC 2 Trust Services",
+          "Xây dựng thành công báo cáo kiểm soát truy cập định kỳ"
+        ],
+        "edgeCases": [
+          "Bằng chứng thiếu tính liên tục theo thời gian yêu cầu",
+          "Nhân sự phụ trách không cung cấp đúng hạn tài liệu giải trình"
+        ],
+        "deliverables": "Compliance Evidence Package for External Auditors",
+        "role": "Vũ Thị Mai",
+        "assigneeName": "Vũ Thị Mai",
+        "estimatedHours": 35,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Phối hợp Kiểm thử Thâm nhập (Penetration Testing) Độc lập",
+        "category": "Security Testing",
+        "description": "Làm việc với đơn vị kiểm thử thâm nhập độc lập (Third-party Pentest), cung cấp phạm vi và hỗ trợ kỹ thuật trong quá trình tấn công mô phỏng.",
+        "acceptanceCriteria": [
+          "Hoàn thành kỳ kiểm tra Pentest không còn lỗ hổng mức High/Critical chưa được vá",
+          "Nhận báo cáo chứng nhận kết quả Penetration Testing từ bên thứ ba"
+        ],
+        "edgeCases": [
+          "Công cụ Pentest gây sập dịch vụ Production trong quá trình kiểm thử",
+          "Phát sinh lỗ hổng zero-day mới trong thời gian kiểm thử"
+        ],
+        "deliverables": "Independent Penetration Testing Report & Remediation Sign-off",
+        "role": "Chief Information Security Officer (CISO) / Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 36,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Đánh giá Final Audit và Hoàn thiện Báo cáo SOC 2 / PCI-DSS",
+        "category": "Compliance & Audit",
+        "description": "Làm việc trực tiếp với đoàn kiểm toán viên độc lập, giải trình kỹ thuật và hoàn thiện hồ sơ chứng nhận PCI-DSS Level 1 và SOC 2 Type II.",
+        "acceptanceCriteria": [
+          "Đạt chứng nhận không có điểm không phù hợp (Non-conformity) nghiêm trọng",
+          "Nhận thư cam kết cấp chứng chỉ từ tổ chức kiểm toán quốc tế"
+        ],
+        "edgeCases": [
+          "Đoàn kiểm toán yêu cầu bổ sung bằng chứng phát sinh ngoài dự kiến",
+          "Chậm trễ trong việc ký kết báo cáo chính thức do thủ tục pháp lý"
+        ],
+        "deliverables": "Official PCI-DSS Level 1 & SOC 2 Type II Compliance Certificates",
+        "role": "Chief Information Security Officer (CISO) / Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 40,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Xây dựng Sổ tay Vận hành Bảo mật và Ứng phó Sự cố",
+        "category": "Operations & Runbook",
+        "description": "Biên soạn sổ tay vận hành bảo mật (Security Operations Runbook), quy trình xử lý sự cố an toàn thông tin và quản lý khóa mã hóa.",
+        "acceptanceCriteria": [
+          "Sổ tay vận hành bao gồm đầy đủ quy trình xoay vòng khóa, xử lý cảnh báo SIEM",
+          "Được đội ngũ vận hành và bảo mật phê duyệt và ký nhận"
+        ],
+        "edgeCases": [
+          "Tài liệu quá phức tạp khiến đội ngũ vận hành khó thực hiện khi xảy ra sự cố",
+          "Thiếu kịch bản ứng phó cho các hình thức tấn công mới"
+        ],
+        "deliverables": "Security Operations Runbook & Incident Response Playbook",
+        "role": "Vũ Thị Mai",
+        "assigneeName": "Vũ Thị Mai",
+        "estimatedHours": 32,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Đóng gói Pipeline CI/CD Bảo mật và Tự động hóa Compliance Guardrails",
+        "category": "DevSecOps",
+        "description": "Tích hợp các chốt kiểm tra bảo mật (Security Guardrails) tự động vào pipeline CI/CD để ngăn chặn việc đưa mã nguồn chứa lỗ hổng lên Production.",
+        "acceptanceCriteria": [
+          "Pipeline tự động chặn build nếu phát hiện secret hardcode hoặc lỗi CVE High/Critical",
+          "Thời gian quét bảo mật trong CI/CD dưới 10 phút"
+        ],
+        "edgeCases": [
+          "False positive từ công cụ quét mã nguồn làm gián đoạn release gấp",
+          "Lỗi cấu hình webhook giữa git repository và công cụ quét bảo mật"
+        ],
+        "deliverables": "Secure CI/CD Pipeline with Automated Compliance Guardrails",
+        "role": "DevSecOps Engineer",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 38,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Đóng băng Mã nguồn và Bàn giao Hệ thống Production Bảo mật",
+        "category": "Backend Security",
+        "description": "Thực hiện đóng băng mã nguồn (Code Freeze), kiểm tra lần cuối tính toàn vẹn hệ thống backend và bàn giao vận hành cho đội ngũ Production.",
+        "acceptanceCriteria": [
+          "Mã nguồn Production được ký số (Digital Signing) toàn bộ",
+          "Toàn bộ quyền truy cập root/admin được thu hồi và chuyển sang mô hình Just-In-Time Access"
+        ],
+        "edgeCases": [
+          "Phát sinh lỗi hotfix khẩn cấp trong giai đoạn code freeze",
+          "Xung đột phân quyền truy cập giữa các kỹ sư vận hành"
+        ],
+        "deliverables": "Production Handover Package & Code Signing Verification Report",
+        "role": "Senior Backend Security Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      }
+    ]
+  },
+  {
+    "typeId": "ARCH_6_AI_RAG",
+    "name": "Dạng 6: R&D / AI Agent & RAG Pipeline (Enterprise Multi-Source Search & Chatbot)",
+    "taskCount": 12,
+    "durationMs": 12164,
+    "tasks": [
+      {
+        "title": "Khao sát nguồn dữ liệu và Thiết kế Kiến trúc Hybrid Search RAG",
+        "category": "Architecture",
+        "description": "Phân tích đặc thù tài liệu PDF, Confluence, Jira và thiết kế kiến trúc Hybrid Search kết hợp Dense Embedding và BM25 cho RAG Pipeline.",
+        "acceptanceCriteria": [
+          "Tài liệu kiến trúc RAG thông qua phê duyệt",
+          "Xác định chiến lược chunking tài liệu tối ưu (overlap, size)"
+        ],
+        "edgeCases": [
+          "Tài liệu PDF quét ảnh không đọc được text",
+          "Ký tự đặc biệt trong nội dung Jira/Confluence"
+        ],
+        "deliverables": "System Architecture Document & Data Ingestion Pipeline Design",
+        "role": "AI Solution Architect / Tech Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 40,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Xây dựng Ingestion Pipeline và Vector DB Indexing",
+        "category": "Data Engineering",
+        "description": "Xây dựng luồng trích xuất dữ liệu đa nguồn, sinh gemini-embedding và nạp vào Vector Database kết hợp Sparse BM25 Index.",
+        "acceptanceCriteria": [
+          "Pipeline đồng bộ hóa dữ liệu tự động từ PDF, Confluence, Jira hoàn thành",
+          "Tạo thành công Dense Vector Index và BM25 Index cho tập dữ liệu mẫu"
+        ],
+        "edgeCases": [
+          "Mất kết nối API khi gọi gemini-embedding hàng loạt",
+          "Trùng lặp dữ liệu khi sync nhiều lần"
+        ],
+        "deliverables": "Data Ingestion Script & Vector DB Schema",
+        "role": "Senior AI / Data Pipeline Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 38,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Thiết kế Giao diện Chat UI và Luồng Streaming cơ sở",
+        "category": "Frontend Development",
+        "description": "Phát triển khung giao diện Web Chat tương tác với AI Agent hỗ trợ hiển thị tin nhắn thời gian thực và Markdown.",
+        "acceptanceCriteria": [
+          "Giao diện phản hồi mượt mà trên desktop",
+          "Hỗ trợ render Markdown và code snippet chính xác"
+        ],
+        "edgeCases": [
+          "Mất kết nối WebSocket/SSE đột ngột từ client",
+          "Tràn giao diện khi nhận chuỗi text quá dài không ngắt dòng"
+        ],
+        "deliverables": "Frontend Chat UI Repository v1",
+        "role": "Frontend Chat UI & Streaming Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Xây dựng Khung Đánh giá RAG Triad và Bộ Test Dataset",
+        "category": "QA & Evaluation",
+        "description": "Xây dựng bộ câu hỏi chuẩn (Gold Standard Dataset) và thiết lập khung đánh giá RAG Triad (Context Relevance, Groundedness, Answer Relevance).",
+        "acceptanceCriteria": [
+          "Hoàn thành bộ 100 câu hỏi test case nghiệp vụ đa dạng",
+          "Thiết lập script tự động đo lường RAG Triad metrics"
+        ],
+        "edgeCases": [
+          "Câu hỏi mơ hồ không có đáp án rõ ràng trong tài liệu",
+          "Model chấm điểm (LLM-as-a-judge) cho kết quả không ổn định"
+        ],
+        "deliverables": "Evaluation Framework & Gold Standard Dataset",
+        "role": "QA / AI Evaluation & Benchmark Specialist",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 36,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Tích hợp Cross-Encoder Reranking và Tối ưu hóa Time-to-First-Token",
+        "category": "AI / RAG Core",
+        "description": "Tích hợp mô hình Cross-Encoder để rerank kết quả từ Hybrid Search và tinh chỉnh hệ thống để đảm bảo Time-to-first-token dưới 800ms.",
+        "acceptanceCriteria": [
+          "Độ trễ Time-to-first-token đạt < 800ms trên môi trường staging",
+          "Độ chính xác retrieval cải thiện tối thiểu 15% sau khi bật Rerank"
+        ],
+        "edgeCases": [
+          "Cross-Encoder gây nghẽn cổ chai khi số lượng candidate quá lớn",
+          "Timeout khi LLM phản hồi chậm"
+        ],
+        "deliverables": "Hybrid Search & Reranking Service Module",
+        "role": "Trần Quang Huy",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Tối ưu hóa Data Pipeline & Tích hợp Redis Caching cho RAG",
+        "category": "Data Engineering",
+        "description": "Cải tiến tốc độ truy vấn Vector DB, đồng thời tích hợp Redis Caching cho các câu hỏi trùng lặp nhằm giảm tải và tăng tốc độ phản hồi.",
+        "acceptanceCriteria": [
+          "Giảm 40% thời gian truy vấn tìm kiếm nhờ Redis Cache",
+          "Pipeline cập nhật dữ liệu tự động định kỳ không làm gián đoạn hệ thống"
+        ],
+        "edgeCases": [
+          "Cache invalidation khi tài liệu nguồn thay đổi",
+          "Dữ liệu trong Redis vượt quá dung lượng cho phép"
+        ],
+        "deliverables": "Optimized Data Pipeline & Redis Cache Service",
+        "role": "Senior AI / Data Pipeline Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Tích hợp Streaming Response và Xử lý Lỗi trên Chat UI",
+        "category": "Frontend Development",
+        "description": "Kết nối Chat UI với API backend hỗ trợ Server-Sent Events (SSE) để streaming token mượt mà và xử lý các trạng thái lỗi mạng.",
+        "acceptanceCriteria": [
+          "Hiển thị streaming token theo thời gian thực không bị giật hình",
+          "Tự động kết nối lại khi mất mạng tạm thời"
+        ],
+        "edgeCases": [
+          "Stream bị ngắt quãng giữa chừng do timeout proxy",
+          "Client render chậm khi tốc độ stream token quá nhanh"
+        ],
+        "deliverables": "Streaming Chat UI Production-Ready",
+        "role": "Frontend Chat UI & Streaming Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 38,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Kiểm thử Benchmark RAG Triad và Tải hệ thống",
+        "category": "QA & Evaluation",
+        "description": "Chạy benchmark toàn diện hệ thống với 100 test cases, đo lường điểm số RAG Triad và kiểm tra chịu tải đồng thời (Load Testing).",
+        "acceptanceCriteria": [
+          "Điểm trung bình RAG Triad đạt từ 0.85/1.0 trở lên",
+          "Hệ thống chịu được 50 concurrent users mà tổng thời gian trả lời dưới 3s"
+        ],
+        "edgeCases": [
+          "Hệ thống quá tải khi số lượng concurrent request tăng vọt",
+          "Điểm Groundedness thấp do LLM bịa đặt thông tin (hallucination)"
+        ],
+        "deliverables": "Benchmark & Load Testing Report",
+        "role": "QA / AI Evaluation & Benchmark Specialist",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 38,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Quản lý Triển khai Production & Vận hành A/B Testing",
+        "category": "Architecture & DevOps",
+        "description": "Thiết lập hạ tầng Production, cấu hình cơ chế A/B Testing chia traffic cho 50 nhân viên thử nghiệm nội bộ.",
+        "acceptanceCriteria": [
+          "Hệ thống vận hành ổn định trên môi trường Production Kubernetes",
+          "Cơ chế A/B Testing phân tách thành công 2 nhóm user test"
+        ],
+        "edgeCases": [
+          "Lỗi cấu hình DNS hoặc chứng chỉ SSL trên môi trường thật",
+          "Traffic dồn ứ vào một nhánh A/B Testing duy nhất"
+        ],
+        "deliverables": "Production Deployment & A/B Testing Configuration",
+        "role": "AI Solution Architect / Tech Lead",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Giám sát Data Pipeline và Xử lý Dữ liệu Real-time Production",
+        "category": "Data Engineering",
+        "description": "Giám sát hoạt động của Data Pipeline trên Production, đảm bảo đồng bộ dữ liệu liên tục và tối ưu hóa chi phí vận hành API.",
+        "acceptanceCriteria": [
+          "Pipeline chạy ngầm ổn định 24/7 không có lỗi sync",
+          "Báo cáo thống kê lưu lượng dữ liệu và chi phí API đầy đủ"
+        ],
+        "edgeCases": [
+          "Nguồn Confluence/Jira thay đổi schema API đột ngột",
+          "Tràn bộ nhớ đệm khi số lượng file PDF mới quá lớn"
+        ],
+        "deliverables": "Production Data Pipeline Monitor & Maintenance Script",
+        "role": "Senior AI / Data Pipeline Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Hoàn thiện Trải nghiệm Người dùng & Thu thập Phản hồi A/B Testing",
+        "category": "Frontend Development",
+        "description": "Tinh chỉnh UI dựa trên feedback thực tế từ 50 nhân viên trong giai đoạn A/B Testing và tích hợp công cụ ghi nhận phản hồi (thumbs up/down).",
+        "acceptanceCriteria": [
+          "Tích hợp nút đánh giá chất lượng câu trả lời thành công trên UI",
+          "Tỷ lệ lỗi giao diện dưới 1% trong suốt quá trình thử nghiệm"
+        ],
+        "edgeCases": [
+          "Người dùng spam nút gửi phản hồi liên tục",
+          "Lỗi hiển thị trên các trình duyệt cũ"
+        ],
+        "deliverables": "Polished Chat UI & User Feedback Collection Module",
+        "role": "Frontend Chat UI & Streaming Developer",
+        "assigneeName": "Đặng Thu Hà",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Nghiệm thu UAT, Đánh giá A/B Testing và Bàn giao Sổ tay Vận hành",
+        "category": "QA & Evaluation",
+        "description": "Tổng hợp kết quả A/B Testing từ 50 nhân viên, thực hiện nghiệm thu UAT và biên soạn sổ tay vận hành hệ thống cho bộ phận IT.",
+        "acceptanceCriteria": [
+          "Độ hài lòng của nhân viên qua A/B Testing đạt trên 90%",
+          "Hoàn thiện tài liệu sổ tay hướng dẫn vận hành và xử lý sự cố (Runbook)"
+        ],
+        "edgeCases": [
+          "Nhân viên không gửi feedback đầy đủ theo yêu cầu",
+          "Phát sinh lỗi đặc thù trong ngày đầu chạy pilot thực tế"
+        ],
+        "deliverables": "UAT Report, A/B Testing Analysis & Operations Runbook",
+        "role": "QA / AI Evaluation & Benchmark Specialist",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 36,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      }
+    ]
+  },
+  {
+    "typeId": "ARCH_7_INCIDENT",
+    "name": "Dạng 7: Xử lý Sự cố Khẩn cấp, Tái cấu trúc Phòng vệ & Post-Mortem",
+    "taskCount": 12,
+    "durationMs": 12808,
+    "tasks": [
+      {
+        "title": "Phân tích Sự cố & Thiết lập Môi trường Tái hiện Staging",
+        "category": "Incident Investigation",
+        "description": "Thu thập log, metric và tái hiện sự cố rò rỉ bộ nhớ cùng tắc nghẽn connection pool trên môi trường staging.",
+        "acceptanceCriteria": [
+          "Tái hiện chính xác hiện tượng sập hệ thống trong 3 lần test liên tiếp",
+          "Xác định được nguyên nhân gốc rễ (Root Cause) của Memory Leak",
+          "Hoàn thành báo cáo đánh giá ban đầu cho ban quản lý"
+        ],
+        "edgeCases": [
+          "Staging không tái hiện được do thiếu tải",
+          "Log production bị thiếu do cấu hình rotation"
+        ],
+        "deliverables": "Root Cause Analysis Report v1.0",
+        "role": "Incident Commander / Principal Architect",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 40,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Phân tích Heap Snapshot & Triển khai Hotfix Patch Cơ bản",
+        "category": "Backend Remediation",
+        "description": "Phân tích Heap Memory Snapshot, fix các đoạn code gây rò rỉ bộ nhớ và tối ưu connection pool.",
+        "acceptanceCriteria": [
+          "Giảm mức sử dụng bộ nhớ heap ổn định dưới 75% tải đỉnh",
+          "Sửa lỗi kết nối database bị treo, không giải phóng connection",
+          "Vượt qua kiểm tra unit test sau khi vá lỗi"
+        ],
+        "edgeCases": [
+          "Memory leak ẩn bên trong thư viện bên thứ ba (3rd-party library)",
+          "Connection pool timeout khi DB quá tải"
+        ],
+        "deliverables": "Hotfix Patch Codebase v1.0",
+        "role": "Senior Backend Core Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 38,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Cấu hình SRE Monitoring & Thiết lập Alerting MTTR",
+        "category": "SRE & Observability",
+        "description": "Thiết lập cảnh báo thời gian thực cho memory usage, connection pool và đo lường MTTR ban đầu.",
+        "acceptanceCriteria": [
+          "Hệ thống cảnh báo kích hoạt dưới 30 giây khi xảy ra bất thường",
+          "Dashboard SRE hiển thị đầy đủ các chỉ số cốt lõi của giao dịch ngân hàng",
+          "Xác lập baseline cho chỉ số MTTR hiện tại"
+        ],
+        "edgeCases": [
+          "Cảnh báo giả (False Positive) liên tục làm phiền đội on-call",
+          "Network latency làm chậm trễ tín hiệu alert"
+        ],
+        "deliverables": "SRE Monitoring Dashboard & Alerting Rules",
+        "role": "Lead SRE / On-call Specialist",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 36,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Xây dựng Test Plan & Kiểm thử Hồi quy Sơ bộ",
+        "category": "QA & Testing",
+        "description": "Xây dựng kịch bản kiểm thử tải đặc thù để kiểm tra khả năng chịu tải sau khi áp dụng hotfix patch.",
+        "acceptanceCriteria": [
+          "Hoàn thành test plan phủ 100% các luồng giao dịch cốt lõi",
+          "Thiết lập kịch bản stress test giả lập 5000 concurrent users",
+          "Đảm bảo không có lỗi chức năng sau khi vá lỗi"
+        ],
+        "edgeCases": [
+          "Môi trường test không đồng bộ với production",
+          "Dữ liệu test bị thiếu hoặc không hợp lệ"
+        ],
+        "deliverables": "Test Plan & Initial Stress Test Report",
+        "role": "QA & Chaos & Stress Testing Engineer",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 35,
+        "sprint": "Sprint 1",
+        "startDate": "2026-11-20",
+        "dueDate": "2026-12-03"
+      },
+      {
+        "title": "Kiến trúc Hóa Cơ chế Phòng vệ & Chống Sập Dây Chuyền",
+        "category": "Architecture Hardening",
+        "description": "Thiết kế tổng thể kiến trúc Circuit Breaker, Dead-Letter Queue (DLQ) và Rate Limiting.",
+        "acceptanceCriteria": [
+          "Hoàn thành tài liệu thiết kế giải pháp phòng vệ chống Cascading Failure",
+          "Được phê duyệt bởi kiến trúc sư trưởng và bộ phận an toàn thông tin",
+          "Xác định rõ các ngưỡng cấu hình (threshold) cho Circuit Breaker"
+        ],
+        "edgeCases": [
+          "Rate limiter chặn nhầm giao dịch hợp lệ của khách hàng VIP",
+          "DLQ bị tràn khi số lượng transaction lỗi vượt quá dung lượng"
+        ],
+        "deliverables": "Defense Architecture Design Document",
+        "role": "Incident Commander / Principal Architect",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 35,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Tích hợp Circuit Breaker, DLQ & Rate Limiting vào Core Backend",
+        "category": "Backend Engineering",
+        "description": "Triển khai mã nguồn Resilience4j Circuit Breaker, tích hợp Dead-Letter Queue và cơ chế Rate Limiting.",
+        "acceptanceCriteria": [
+          "Tích hợp thành công Resilience4j vào các gọi API thanh toán liên ngân hàng",
+          "Giao dịch lỗi tự động đẩy vào DLQ mà không làm sập hệ thống",
+          "Rate Limiting hoạt động chính xác theo TPS đã định mức"
+        ],
+        "edgeCases": [
+          "Circuit Breaker không tự hồi phục sau khi hạ tầng ổn định",
+          "Xung đột giữa các thread khi xử lý DLQ retry"
+        ],
+        "deliverables": "Hardened Backend Source Code with Resilience Features",
+        "role": "Senior Backend Core Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 42,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Triển khai Chaos Engineering & Kiểm thử MTTR < 15 Phút",
+        "category": "SRE & Chaos Engineering",
+        "description": "Tiến hành bơm lỗi (Chaos Injection) để kiểm chứng khả năng tự phục hồi và đo lường MTTR thực tế.",
+        "acceptanceCriteria": [
+          "Đạt chỉ số MTTR thực tế dưới 15 phút trong các kịch bản cắt kết nối DB đột ngột",
+          "Circuit Breaker kích hoạt thành công cô lập dịch vụ lỗi",
+          "Hệ thống tự động khôi phục hoàn toàn trạng thái bình thường sau sự cố giả lập"
+        ],
+        "edgeCases": [
+          "Chaos test gây gián đoạn dữ liệu thực trên staging",
+          "Quy trình on-call phản ứng chậm hơn kỳ vọng"
+        ],
+        "deliverables": "Chaos Engineering Report & MTTR Verification",
+        "role": "Lead SRE / On-call Specialist",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 40,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Kiểm thử Tải Nâng cao & Kiểm chứng Cơ chế Phòng vệ",
+        "category": "QA & Stress Testing",
+        "description": "Thực hiện kiểm thử tải cường độ cao kết hợp ép lỗi để kiểm tra độ bền của Circuit Breaker và Rate Limiter.",
+        "acceptanceCriteria": [
+          "Hệ thống không bị treo hay sập dây chuyền dưới tải gấp 3 lần bình thường",
+          "Rate Limiter trả về mã lỗi HTTP 429 chính xác khi vượt ngưỡng",
+          "Không có dữ liệu giao dịch nào bị mất mát trong DLQ"
+        ],
+        "edgeCases": [
+          "Tài nguyên máy ảo test bị cạn kiệt trước hệ thống",
+          "Kết quả test không ổn định do nhiễu mạng"
+        ],
+        "deliverables": "Stress & Defense Verification Test Report",
+        "role": "QA & Chaos & Stress Testing Engineer",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 38,
+        "sprint": "Sprint 2",
+        "startDate": "2026-12-04",
+        "dueDate": "2026-12-17"
+      },
+      {
+        "title": "Kiểm duyệt An toàn & Phê duyệt Triển khai Production",
+        "category": "Governance & Deployment",
+        "description": "Thẩm định toàn bộ gói giải pháp phòng vệ và lập kế hoạch golive chi tiết cho môi trường production.",
+        "acceptanceCriteria": [
+          "Hoàn thành biên bản kiểm định an toàn kỹ thuật (Sign-off)",
+          "Kế hoạch rollout production có phương án rollback rõ ràng trong vòng 5 phút",
+          "Đảm bảo tuân thủ đầy đủ các tiêu chuẩn bảo mật ngân hàng"
+        ],
+        "edgeCases": [
+          "Phát sinh lỗ hổng bảo mật cấu hình vào phút chót",
+          "Ban quản lý yêu cầu hoãn lịch golive do rủi ro nghiệp vụ"
+        ],
+        "deliverables": "Production Deployment Sign-off & Rollback Plan",
+        "role": "Incident Commander / Principal Architect",
+        "assigneeName": "Trần Quang Huy",
+        "estimatedHours": 30,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Triển khai Production & Tối ưu hóa Hiệu năng Cuối cùng",
+        "category": "Production Deployment",
+        "description": "Thực hiện rollout các tính năng phòng vệ và hotfix lên môi trường production ngoài giờ cao điểm.",
+        "acceptanceCriteria": [
+          "Deployment thành công 100% không gián đoạn dịch vụ khách hàng",
+          "CPU và Memory trên production ổn định dưới tải thực tế",
+          "Toàn bộ connection pool và transaction log hoạt động bình thường"
+        ],
+        "edgeCases": [
+          "Lỗi cấu hình biến môi trường trên production cluster",
+          "Cache warm-up làm chậm giao dịch đầu tiên sau khi restart"
+        ],
+        "deliverables": "Production Release Successful Notification & Status Report",
+        "role": "Senior Backend Core Engineer",
+        "assigneeName": "Nguyễn Minh Khôi",
+        "estimatedHours": 32,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Bàn giao Vận hành, Sổ tay Sự cố & Diễn tập MTTR",
+        "category": "Operations & Runbook",
+        "description": "Xây dựng sổ tay vận hành (Runbook), tài liệu Post-Mortem hoàn chỉnh và tổ chức diễn tập cho đội ngũ support.",
+        "acceptanceCriteria": [
+          "Hoàn thành tài liệu Post-Mortem Report chi tiết nguyên nhân và bài học kinh nghiệm",
+          "Sổ tay vận hành xử lý sự cố khẩn cấp được bàn giao cho đội NOC/SRE",
+          "100% thành viên vận hành nắm vững quy trình xử lý khi kích hoạt Circuit Breaker"
+        ],
+        "edgeCases": [
+          "Đội ngũ vận hành mới chưa quen với quy trình phòng vệ mới",
+          "Tài liệu thiếu chi tiết về các tình huống ngoại lệ"
+        ],
+        "deliverables": "Post-Mortem Report & Operations Runbook v2.0",
+        "role": "Lead SRE / On-call Specialist",
+        "assigneeName": "Phạm Tuấn Anh",
+        "estimatedHours": 35,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      },
+      {
+        "title": "Kiểm thử Chấp nhận UAT & Nghiệm thu Toàn diện Chiến dịch",
+        "category": "UAT & Sign-off",
+        "description": "Thực hiện kiểm thử chấp nhận cuối cùng trên production và nghiệm thu toàn bộ các chỉ số cam kết.",
+        "acceptanceCriteria": [
+          "Đạt 100% tiêu chí nghiệm thu UAT từ bộ phận nghiệp vụ ngân hàng",
+          "Chỉ số MTTR thực tế duy trì ổn định dưới 15 phút qua các bài test định kỳ",
+          "Đóng dự án thành công với biên bản bàn giao hoàn chỉnh"
+        ],
+        "edgeCases": [
+          "Phát sinh lỗi nhỏ về giao diện báo cáo sự cố sau golive",
+          "Ý kiến trái chiều từ bộ phận kiểm toán nội bộ"
+        ],
+        "deliverables": "UAT Acceptance Sign-off & Campaign Closure Report",
+        "role": "QA & Chaos & Stress Testing Engineer",
+        "assigneeName": "Bùi Phương Thảo",
+        "estimatedHours": 34,
+        "sprint": "Sprint 3",
+        "startDate": "2026-12-18",
+        "dueDate": "2026-12-31"
+      }
+    ]
+  }
+]
